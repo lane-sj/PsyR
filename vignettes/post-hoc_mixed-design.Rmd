@@ -1,5 +1,5 @@
 ---
-title: "Post-Hoc Mixed b x (w) Design"
+title: "Post-Hoc Mixed Between x Within Design"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{post-hoc_mixed-design}
@@ -10,11 +10,11 @@ bibliography: references.bib
 
 A vignette to demonstrate how to use PsyR to enact a Post-Hoc Analysis of Variance via Confidence Intervals in a mixed between x within design, as in chapter 7 of @bird2004. The method defines and analyses 3 families - between, within, and between x within. In doing so, contrast F~c~s and critical constants are defined according to their family's critical value, ensuring the FWER is controlled at ⍺. The families are as follows:
 
-- **Between** - The overall between main effect using a Scheffé ANOVA F Simultaneous Test Procedure (STP). This is a univariate approach.
+- **Between** - The overall between main effect using a Scheffé ANOVA F Simultaneous Test Procedure. This is a univariate approach, assuming sphericity.
 
-- **Within** - The overall within main effect using a Hotelling's T^2^ test [@hotelling1931]. This is a multivariate approach.
+- **Within** - The overall within main effect using a Hotelling's T^2^ test [@hotelling1931]. This is a multivariate approach, assuming a lack of sphericity.
 
-- **Between x Within** - The interaction of the between and within effects using Roy's Greatest Characteristic Root [@roy1953]. This is a multivariate approach.
+- **Between x Within** - The interaction of the between and within effects using Roy's Greatest Characteristic Root [@roy1953]. This is a multivariate approach, assuming a lack of spherecity.
 
 Through adopting a multivariate approach for the within-subjects and between x within-subjects families, the current method assumes a lack of sphericity (as is necessarily the case in a within-subjects design), defining separate MSE and SE terms for each within-subjects contrast. This protects against inflation of the type I error rate.
 
@@ -27,7 +27,7 @@ knitr::opts_chunk$set(
 
 ## The Packages
 
-To use PsyR to calculate confidence intervals over contrast effects, we will utilise a workflow with functions from [afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to implement ANOVA models, and [emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated marginal means and the required contrast estimates. So let's load those packages, and any others that are helpful for our workflow.
+To use PsyR to calculate confidence intervals over contrast effects defined post-hoc (after the data has been seen), we will utilise a workflow with functions from [afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to implement ANOVA models, and [emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated marginal means and the required contrast estimates. So let's load those packages, and any others that are helpful for our workflow.
 
 ```{r setup, message = FALSE, warning = FALSE}
 library(afex)
@@ -38,7 +38,7 @@ library(tidyverse)
 
 ## The Data
 
-The "social_anxiety" dataframe contains the results of an experiment with N = 90 participants assessing a new treatment for social anxiety using a 3 x (4) design. Participants are randomly allocated to one of three levels of the between-subjects independent variable: a minimum contact control condition, a standard treatment, or a new treatment. All participants are measured on four occasions: immediately before treatment, immediately after treatment, at a 3 month follow-up, and at a 6 month follow-up. The dependent variable is social anxiety rating, where a lower score is indicative of lower social anxiety.
+The `social_anxiety` dataframe contains the results of an experiment with N = 90 participants assessing a new treatment for social anxiety using a 3 x (4) design. Participants are randomly allocated to one of three levels of the between-subjects independent variable: a minimum contact control condition, a standard treatment, or a new treatment. All participants are measured on four occasions: immediately before treatment, immediately after treatment, at a 3 month follow-up, and at a 6 month follow-up. The dependent variable is social anxiety rating, where a lower score is indicative of lower social anxiety.
 
 Lets load the data, then call the `head()` function to print the first 5 rows.
 
@@ -47,13 +47,13 @@ data(social_anxiety)
 head(social_anxiety, 5)
 ```
 
-To learn more about the social_anxiety dataframe call the help function using `?df` to open its documentation.
+To learn more about the `social_anxiety` dataframe call the help function using `?df` to open its documentation.
 
 ```{r, what_socialanx, message = FALSE, warning = FALSE, eval = FALSE}
 ?social_anxiety
 ```
 
-When working with this dataframe, we need the independent variables to be represented as factors (rather than doubles) and ordered according to their chronological order. So, call `fct_relevel()` to reassign the "Session" column to the factor datatype and order the levels of the within-subjects independent variable. Likewise, call `factor()` and `fct_recode()` to reassign the "Group" column as a factor and order the levels of the between-subjects independent variable.
+Let's tidy up the data, labeling our levels of the independent variables for greater clarity.
 
 ```{r longform}
 social_anxiety <- social_anxiety %>%
@@ -71,7 +71,7 @@ social_anxiety <- social_anxiety %>%
   )
 ```
 
-Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (alongside other methods) can be used to inform which contrasts should be analysed.
+Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (alongside other methods) can be used to inform which contrasts should be analysed. This is especially relevant for post-hoc analysis, where we may notice trends and patterns emerging that could not have been conceptualised a priori.
 
 ```{r linegraphit, fig.width = 7, fig.height = 4, message = FALSE, warning = FALSE, dev = 'svg'}
 social_anxiety %>%
@@ -91,7 +91,9 @@ Lets prepare to run some statistical tests!
 
 Here we will create the building blocks for three distinct tests of the homogeneity hypothesis (one per family) and corresponding SCIs per family. The following code builds towards this approach.
 
-First, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, let's create the object *mod* by calling the `aov_ez()` function. Place the "Subject" column in the ID argument, "Score" as our dependent variable, social_anxiety as our dataframe, "Group" as the between-subjects factor, and "Session" as the within-subjects factor. Finally, create the *emms_win* object, calling the `emmeans()` function and specifying that we want to take in *mod* (the object we just made) and output according to "Session" (which, as a reminder, is a column of the factor datatype that identifies what level of the within-subjects independent variable the score belongs to). Running this code will give us the estimated marginal means for each level of the within-subjects independent variable.
+First, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, let's create the object `mod` by calling the `aov_ez()` function. Place the "Subject" column in the ID argument, "Score" as our dependent variable, `social_anxiety` as our dataframe, "Group" as the between-subjects factor, and "Session" as the within-subjects factor. Finally, create the `emms_win` object, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to "Session" (which, as a reminder, is a column of the factor datatype that identifies what level of the within-subjects independent variable the score belongs to). Running this code will give us the estimated marginal means for each level of the within-subjects independent variable.
+
+Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Thus, this workflow differs from the more common omnibus ANOVA with follow up significance tests.
 
 ```{r model}
 # set emmeans option to multivariate
@@ -110,13 +112,13 @@ emms_win <- emmeans(mod, "Session")
 knitr::kable(emms_win, digits = 3)
 ```
 
-Now let's define and obtain our between-subjects contrast table. To do so, create the *btwn_contrasts* object, calling `list()` to define our contrasts, which compare the following:
+Now let's define and obtain our between-subjects contrast table. To do so, create the `btwn_contrasts` object, calling `list()` to define our contrasts, which compare the following:
 
 - "Ts - C" ➞ The difference between the minimum contact Control condition and the average of the two treatment conditions.
 
 - "NT - ST" ➞ The difference between the New and Standard treatment conditions.
 
-We can now generate an ANOVA table with tests of significance of each of these between-subjects main effects, using an ANOVA F STP test of significance. To do so, create the *btwn_fx* object. Then, call the `contrast()` function from the emmeans package, setting *emms_win* in the "object" argument and our newly defined *btwn_contrasts* in the "method" argument.
+We can now generate an ANOVA table with tests of significance of each of these between-subjects main effects, using an ANOVA F Simultaneous Test Procedure test of significance. To do so, create the `btwn_fx` object. Then, call the `contrast()` function from the emmeans package, setting `emms_win` in the "object" argument and our newly defined `btwn_contrasts` in the "method" argument.
 
 ```{r, btwn}
 btwn_contrasts <- list(
@@ -130,7 +132,7 @@ btwn_fx <- contrast(emms_btwn, btwn_contrasts)
 knitr::kable(btwn_fx, digits = 3)
 ```
 
-Let's also define and obtain our within-subjects contrast table. To do so, create the *win_contrasts* object, calling `list()` to define our contrasts, which compare the following:
+Let's also define and obtain our within-subjects contrast table. To do so, create the `win_contrasts` object, calling `list()` to define our contrasts, which compare the following:
 
 - "Pre - Rest" ➞ The difference between the measure of social anxiety before treatment and the average of measures taken after treatment administration.
 
@@ -138,7 +140,7 @@ Let's also define and obtain our within-subjects contrast table. To do so, creat
 
 - "FU1 - FU2" ➞ The difference between the 3 and 6 month follow-up measures of social anxiety.
 
-Using an overall Hotelling's T^2^ test procedure, we can generate an ANOVA table with tests of significance of each within-subjects main effect. To do so, create the *win_fx* object. Then, call the `contrast()` function from the emmeans package, setting *emms_win* in the "object" argument and our newly defined *win_contrasts* in the "method" argument.
+Using an overall Hotelling's T^2^ test procedure, we can generate an ANOVA table with tests of significance of each within-subjects main effect. To do so, create the `win_fx` object. Then, call the `contrast()` function from the emmeans package, setting `emms_win` in the "object" argument and our newly defined `win_contrasts` in the "method" argument.
 
 ```{r, win}
 win_contrasts <- list(
@@ -152,7 +154,7 @@ win_fx <- contrast(emms_win, win_contrasts)
 knitr::kable(win_fx, digits = 3)
 ```
 
-Finally, lets create an ANOVA table of interaction effects using an overall test of Roy's GCR. To do so, create the *emms_int* object by calling `emmeans()`, placing *mod* in the object argument and outputting according to both our between-subjects and within-subjects independent variables. Next, create the *int_fx* object, calling `contrast()` and setting our newly made *emms_int* in the "object" argument and both our contrasts tables in the "method" argument.
+Finally, lets create an ANOVA table of interaction effects using an overall test of Roy's GCR. To do so, create the `emms_int` object by calling `emmeans()`, placing `mod` in the object argument and outputting according to both our between-subjects and within-subjects independent variables. Next, create the `int_fx` object, calling `contrast()` and setting our newly made `emms_int` in the "object" argument and both our contrasts tables in the "method" argument.
 
 ```{r, int}
 emms_int <- emmeans(
@@ -169,21 +171,21 @@ knitr::kable(int_fx, digits = 3)
 
 ### A Priori Confidence Intervals
 
-To demonstrate the benefits of a post-hoc method, we must first showcase a planned analysis. Here we replicate the Bonferroni correction first presented in chapter 7 of @bird2004. To do so, let's first create the *all_fx* object which is a vector of the three contrast tables previously made. Let's also create the *family_list* object which is a list that labels our contrast tables as within, between and between x within respectively. Next, call `psyci()` with the following arguments.
+To demonstrate the benefits of a post-hoc method, we must first showcase a planned analysis. Here we replicate the Bonferroni correction first presented in chapter 7 of @bird2004. To do so, let's first create the `all_fx` object which is a vector of the three contrast tables previously made. Let's also create the `family_list` object which is a list that labels our contrast tables as within, between and between x within respectively. Next, call `psyci()` with the following arguments.
 
-- The model is the previously made *mod* object, where the model must be made using the afex package (and of class afex_aov).
+- The model is the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
 
-- The contrast_tables argument is set as the previously made *all_fx* object which contains a list of the between, within and between x within contrast tables.
+- The contrast_tables argument is set as the previously made `all_fx` object which contains a list of the between, within and between x within contrast tables.
 
-- The method is set as "bf", creating SCIs (estimate ± SE ⨉ cc) using the Bonferroni-t procedure.
+- The method is set as "bf", creating SCIs (estimate ± SE · cc) using the Bonferroni-t procedure.
 
-- The family list is set as the previously made *family_list*, labeling the contrast tables as within, between and between x within respectively.
+- The family list is set as the previously made `family_list`, labeling the contrast tables as within, between and between x within respectively. The order of the family list must match the order in which contrast tables are passed in.
 
 - The between_factors argument takes in a list of between subjects factor names, as previously defined in the "Group" column of the dataframe.
 
 - The within_factors argument takes in a list of within subjects factor names, as previously defined in the "Session" column of the dataframe.
 
-- Alpha is set as the previously defined *alphas* where ⍺ = 0.05.
+- Alpha is set as the previously defined `alphas` where ⍺ = 0.05.
 
 ```{r, bon, message = FALSE, warning = FALSE}
 all_fx <- c(win_fx, btwn_fx, int_fx)
@@ -247,7 +249,7 @@ psyci(
 
 By and large, a post-hoc analysis merits the same conclusions as the above a priori analysis. However, the loss of power necessary in a post-hoc method has yielded slightly less precise CIs. This has impacted our conclusion regarding the interaction effect of the "Ts - C" \~ "Pre - Rest" contrast. There is now insufficient evidence to suggest that the average of treatment scores (as compared to the minimal contact control) leads to a difference in social anxiety scores at the average of post and follow-up compared to pre-treatment scores.
 
-### The Benefit of Simultaneous Confidence Intervals
+### The Benefit of Post-Hoc Simultaneous Confidence Intervals
 
 The addition of SCIs is especially useful if thresholds of importance are introduced. Imagine that, following new government guidelines, the researcher was only interested in interventions that resulted in a difference of **2 units** on social anxiety. The addition of this stipulation once again alters our analysis. For example, conclusions regarding our post-hoc interaction contrasts would now look as follows:
 
