@@ -30,7 +30,7 @@ library(tidyverse)
 
 ## The Data
 
-The kevin_within dataframe contains data from a single-factor within-subjects experiment assessing the impact of a new treatment on patient wellbeing. N = 5 participants were recruited, and their wellbeing was measured pre-treatment, post-treatment, and at a 6 month follow-up. Thus, the dependent variable (wellbeing) has p = 3 levels.
+The `kevin_within` dataframe contains data from a single-factor within-subjects experiment assessing the impact of a new treatment on patient wellbeing. N = 5 participants were recruited, and their wellbeing was measured pre-treatment, post-treatment, and at a 6 month follow-up. Thus, the dependent variable (wellbeing) has p = 3 levels.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -39,7 +39,7 @@ data(kevin_within)
 head(kevin_within, 5)
 ```
 
-To learn more about the kevin_within dataframe call the help function using `?df` to open its documentation.
+To learn more about the `kevin_within` dataframe call the help function using `?df` to open its documentation.
 
 ```{r, whatfatigue, message = FALSE, warning = FALSE, eval = FALSE}
 ?kevin_within
@@ -84,7 +84,7 @@ Here we will create the building blocks for first an ANOVA output, and later our
 
 - The creation of CIs goes beyond a traditional hypothesis testing approach of determining the significance of a set of contrasts. Where hypothesis testing allows one to determine whether to reject the null hypothesis, CIs provide additional information regarding the directionality and magnitude of the effects at test (while maintaining a FWER \< ⍺).
 
-The following code builds towards this approach. First, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, create a new object *mod* by calling the `aov_ez()` function which takes in the "Subject" column to identify subjects, the "Score" column as the dependent variable, the kevin_within dataframe, and the "Group" column set as between-subjects. Finally, create a new object *emms*, calling the `emmeans()` function and specifying that we want to take in *mod* (the object we just made) and output based upon "Session". Running this code will give us the estimated marginal means for the dependent variable (wellbeing) at each level of the independent variable (time of measurement).
+The following code builds towards this approach. First, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, create a new object `mod` by calling the `aov_ez()` function which takes in the "Subject" column to identify subjects, the "Score" column as the dependent variable, the `kevin_within` dataframe, and the "Group" column set as between-subjects. Finally, create a new object `emms`, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon "Session". Of note, defining mod in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the estimated marginal means for the dependent variable (wellbeing) at each level of the independent variable (time of measurement).
 
 ```{r model}
 # set emmeans option to multivariate
@@ -114,7 +114,7 @@ In this case, simple contrasts examining the difference in wellbeing at each mea
 
 - "FU - Pre" ➞ The difference between 6 month follow-up and pre-intervention scores.
 
-Having defined our contrasts, let's store them within a contrasts table. Create the *cnt_res* object, then call the `contrast()` function from the emmeans package, setting *emms* in the "object" argument and *contrasts* in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+Having defined our contrasts, let's store them within a contrasts table. Create the `cnt_res` object, then call the `contrast()` function from the emmeans package, setting `emms` in the "object" argument and `contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
 
 ```{r phoc}
 contrasts <- list(
@@ -129,13 +129,13 @@ knitr::kable(cnt_res, digits = 3)
 
 ### The (Initial) Interpretation
 
-The above analysis outputs two p-values, with most of them indicating a failure to reject the null hypothesis. Of note, the "Post - Pre" contrast seems significant according to the p-value from emmeans but does not meet the criteria for significance according to the p-value from PsyR. Here, clarity may be achieved by examining our CIs, where lower and upper bounds which are either both positive or both negative are indicative of a significant result. Further, CIs let us understand the magnitude of the effects represented by our contrasts. To generate our CIs with PsyR, let's create an object *contrasts_w_cis* using the `psyci()` function, specifying the following:
+The above analysis outputs two p-values, with most of them indicating a failure to reject the null hypothesis. Of note, the "Post - Pre" contrast seems significant according to the p-value from emmeans but does not meet the criteria for significance according to the p-value from PsyR. Here, clarity may be achieved by examining our CIs, where lower and upper bounds which are either both positive or both negative are indicative of a significant result. Further, CIs let us understand the magnitude of the effects represented by our contrasts. To generate our CIs with PsyR, let's create an object `contrasts_w_cis` using the `psyci()` function, specifying the following:
 
-- The model is the previously made *mod* object, where the model must be made using the afex package (and of class afex_aov).
+- The model is the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
 
-- The contrast_tables argument is set as the previously made *btwn_fx* object. Of note, if one has multiple contrast tables this argument can also take in a list.
+- The contrast_tables argument is set as the previously made `btwn_fx` object. Of note, if one has multiple contrast tables this argument can also take in a list.
 
-- The method is set as "ph", creating confidence intervals (estimate ± SE ⨉ cc) using a post-hoc method [@bird2004].
+- The method is set as "ph", creating confidence intervals (estimate ± SE · cc) using a post-hoc method [@bird2004].
 
 - The family list is set as "w", specifying that the contrast table is within-subjects. The family_list must take in a list of the same length as contrast_tables.
 
