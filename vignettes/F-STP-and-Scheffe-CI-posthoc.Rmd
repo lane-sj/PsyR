@@ -119,7 +119,7 @@ between_contrasts = list(
 Now that we have defined our contrasts, let's store them within a contrasts table. Create the `btwn_fx` object, then call the `contrast()` function from the emmeans package, setting `emms` in the "object" argument and `between_contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
 
 ```{r, between_fx}
-btwn_fx <- contrast(emms, between_contrasts)
+btwn_fx <- contrast(emms, between_contrasts, adjust = "scheffe")
 knitr::kable(btwn_fx, digits = 3)
 ```
 
