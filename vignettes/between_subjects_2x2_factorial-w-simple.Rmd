@@ -1,5 +1,5 @@
 ---
-title: "between_subjects_2x2_factorial-w-simple"
+title: "Between Subjects 2 x 2 Factorial Design with Simple Effects Contrasts"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{between_subjects_2x2_factorial-w-simple}
@@ -12,27 +12,32 @@ bibliography: references.bib
 ---
 
 A vignette to demonstrate a planned contrast analysis for 2 x 2
-between-subjects designs with simple effect. This vignette follows the
+between-subjects designs with simple effects. This vignette follows the
 example in chapter 4 of @bird2004. In following this procedure, one may
 examine simple effects contrasts to analyse cell mean differences at one
-level of a factor by the other level (or levels) of the other factor. In
-doing so, the FWER is controlled at ⍺. This can be achieved through
-defining two families (the A and B Simple Effects Families) which allows
-one to examine either (but not both) A or B simple effects.
-Alternatively, one may define a single non-standard all-factorial
-contrasts family, allowing for investigation of simple effects, main
-effects and interaction effects across all families.
+level of a factor by the level (or levels) of the other factor
+while controlling the FWER at ⍺. This can be achieved through defining
+two families - the A and B Simple Effects Families - which allows one to
+examine either (but not both) A or B simple effects. Alternatively, one
+may define a single non-standard all-factorial contrasts family,
+allowing for investigation of simple effects, main effects and
+interaction effects across all families. In doing so, one maximises power as compared to a traditional F-STP approach.
 
 ## The Packages
 
-To enact a workflow...
+To use PsyR to calculate simultaneous confidence intervals, we will
+utilise a workflow with functions from
+[afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to
+implement ANOVA models, and
+[emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated
+marginal means and the required contrast estimates. So let's load those
+packages, and any others that are helpful for our workflow.
 
 ```{r setup, message = FALSE, warning = FALSE}
 library(PsyR)
 library(tidyverse)
 library(emmeans)
 library(afex)
-library(forcats)
 ```
 
 ## The Data
@@ -40,9 +45,9 @@ library(forcats)
 The `drive_sleepy` dataframe contains the results of a between-subjects
 experiment examining the impact of sleep deprivation and vehicle noise,
 vibration and harshness (NVH) on driving performance. Sleep deprivation
-has J = 2 levels: 12 hours of sleep deprivation and no sleep
-deprivation. NVH has K = 2 levels: high NVH and low NVH. The dependent
-variable is driving performance as operationalised by an error score,
+has J = 2 levels: 12 or zero hours of sleep
+deprivation. NVH has K = 2 levels: high or low NVH. The dependent
+variable is driving performance as operationalised by a driving errors score,
 where a higher score is indicative of poorer performance
 
 Let's load the data, then call the `head()` function to print the first
@@ -75,7 +80,7 @@ drive_sleepy <- drive_sleepy %>%
 ```
 
 Next, let's visualise our data. Doing so allows us to more intuitively
-understand the layout of the data.
+understand its layout.
 
 ```{r graphit, fig.width = 7, fig.height = 4, dev = 'svg'}
 drive_sleepy |> 
@@ -90,32 +95,33 @@ drive_sleepy |>
 Let's prepare to run some statistical tests!
 
 Here we will create the building blocks for first an ANOVA output, and
-later our SCIs. Lets first run our ANOVA and save it in the `mod`
+later our SCIs. To start, let's run our ANOVA and save it in the `mod`
 object. Of note, defining mod in this way enables emmeans to compute
 estimated marginal means from which to apply contrasts of interest.
 
 ```{r model, message = FALSE}
-# perform the statistical model
 mod <- aov_ez(
   "subID",
   "performance",
   drive_sleepy,
   between = c("sleep_deprivation", "nvh")
 )
-
 ```
 
 Time to define our contrasts!
 
 Assembly of contrasts in this design will follow a slightly different
-workflow to other designs without simple effects. Namely, we will follow
-the Studentized Maximum Root (SMR) procedure as outlined on pages 353
-and 354 of @bird2005.
+workflow to other designs without simple effects. Following
+the Studentized Maximum Root (SMR) procedure outlined on pages 353
+and 354 of @bird2005, we must place our contrasts of interest into a
+set of lists and then we define our SMR parameters based on our family
+of models (A(b), B(a), or A(b) $\cap$\ B(a).
 
-"So for the SMR procedure we put all our contrasts of interest into a
-set of lists, and then we define our SMR parameters based on our family
-of models (A(b), B(a), or A(b) $\cap$\$\\cap\$ B(a) - see Bird &
-Hadzi-Pavlovic (2005). Table 2)."
+Let's start by defining our between-subjects contrasts. To do so, create `btwn_cont`, an object which takes in a list of the following contrasts:
+
+- "Sleep_Dep" ➞ The difference between twelve hours and zero hours of sleep deprivation, holding NVH constant.
+
+- "NVH" ➞ The difference between high and low levels of NVH (which, as a reminder, is vehicle noise, vibration and harshness), holding sleep deprivation constant.
 
 ```{r, between_subjects_contrasts}
 btwn_cont <- list(
@@ -124,15 +130,16 @@ btwn_cont <- list(
 )
 ```
 
-Now get an emmeans object and apply the contrasts
+With our between-contrasts list established, let's get our estimated marginal means. To do so, create the `emms` object which takes in our previously made `mod` in the "object" argument and a vector containing our independent variables in the "specs" argument. Let's also create the main effects object `mfx`, using the `contrast()` function and placing `emms` in the "object" argument and `btwn_cont` in the "interaction" argument. This `mfx` object will be important for when we apply our SMR correction later down the track.
 
 ```{r contrasts}
 emms <- emmeans(mod, c("sleep_deprivation", "nvh"))
 mfx <- contrast(emms, btwn_cont)
 ```
 
-We also want the interaction contrast. Note there was nothing stopping
-us adding it to the list of contrasts above.
+We also need our interaction contrast. For the sake of clarity we define it separately, but it is also possible to add this contrast to the above `btwn_cont` list. 
+
+- "int" ➞ The interaction between sleep deprivation and NVH. (expand later)
 
 ```{r interaction_contrast}
 int <- contrast(
@@ -141,27 +148,23 @@ int <- contrast(
 )
 ```
 
-We also want the simple effects of NVH at each level of sleep
-deprivation, and vice versa:
+Finally, let's produce simple effects contrasts of first NVH at each level of sleep deprivation, and secondly sleep deprivation at each level of NVH. To do so, let's do the following. First, create the `nvh_by_sleep_dep` object. This takes in a model which attempts to predict our previously made `mod` (which, as a reminder, is an ANOVA table containg simultaneous tests of the main effects of sleep deprivation, NVH and their interaction) by using score on NVH holding constant sleep deprivation. Next, create the `simp_fx_contrast` object which will take in a list which compares the two levels of NVH (high minus low). Finally, create `nvh_simp_fx`, an object containing two simple effects contrasts examining the effect of NVH in participants with twelve hours of sleep deprivation versus that same effect in participants with zero hours of sleep deprivation.
 
 ```{r nvh_at_sleep_dep}
-nvh_by_sleep_dep <- emmeans(mod, ~ nvh|sleep_deprivation)
-simp_fx_contrast  <- list(
-  "NVH" = c(1, -1)
-)
-nvh_simp_fx <- contrast(nvh_by_sleep_dep, method=simp_fx_contrast)
+nvh_by_sleep_dep <- emmeans(mod, ~ nvh | sleep_deprivation)
+simp_fx_contrast  <- list("NVH" = c(1, -1))
+nvh_simp_fx <- contrast(nvh_by_sleep_dep, method = simp_fx_contrast)
 knitr::kable(nvh_simp_fx, digits = 3)
-
 ```
+Following similar steps, let's also produce simple effects contrasts of sleep deprivation at both high and low NVH. 
 
 ```{r nvh_at_sleep_dep_two}
-sleep_dep_by_nvh <- emmeans(mod, ~ sleep_deprivation|nvh)
-sdep_simp_fx <- contrast(sleep_dep_by_nvh, method=simp_fx_contrast)
+sleep_dep_by_nvh <- emmeans(mod, ~ sleep_deprivation | nvh)
+sdep_simp_fx <- contrast(sleep_dep_by_nvh, method = simp_fx_contrast)
 knitr::kable(sdep_simp_fx, digits = 3)
 ```
 
-Now we apply the SMR correction to all our contrasts, and get the
-confidence intervals for all of them together.
+Finally, let's apply the SMR correction to all our contrasts and produce their corresponding confidence intervals.
 
 ```{r SMR_correction}
 all_fx <- c(mfx, int, nvh_simp_fx, sdep_simp_fx) 
@@ -197,7 +200,7 @@ psyci(
 ## The PsyR contribution: Simultaneous Confidence Intervals
 
 Info from Bird & Hadzi-Pavlovic (2005). See page 359 for SMR parameters.
-See p 360 for the conversion of SMR into a critical constrant.
+See p 360 for the conversion of SMR into a critical constant.
 
 ------------------------------------------------------------------------
 
