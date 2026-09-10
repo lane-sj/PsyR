@@ -115,7 +115,7 @@ workflow to other designs without simple effects. Following
 the Studentized Maximum Root (SMR) procedure outlined on pages 353
 and 354 of @bird2005, we must place our contrasts of interest into a
 set of lists and then we define our SMR parameters based on our family
-of models (A(b), B(a), or A(b) $\cap$\ B(a).
+of models (A(b), B(a), or A(b) $\cap$\ B(a)).
 
 Let's start by defining our between-subjects contrasts. To do so, create `btwn_cont`, an object which takes in a list of the following contrasts:
 
@@ -137,7 +137,7 @@ emms <- emmeans(mod, c("sleep_deprivation", "nvh"))
 mfx <- contrast(emms, btwn_cont)
 ```
 
-We also need our interaction contrast. For the sake of clarity we define it separately, but it is also possible to add this contrast to the above `btwn_cont` list. 
+We also need our interaction contrast. For the sake of clarity we define it separately in this vignette, but it is also possible to add this contrast to the above `btwn_cont` list. 
 
 - "int" ➞ The interaction between sleep deprivation and NVH. (expand later)
 
@@ -164,7 +164,23 @@ sdep_simp_fx <- contrast(sleep_dep_by_nvh, method = simp_fx_contrast)
 knitr::kable(sdep_simp_fx, digits = 3)
 ```
 
-Finally, let's apply the SMR correction to all our contrasts and produce their corresponding confidence intervals.
+Finally, let's apply the SMR correction to all our contrasts and produce their corresponding confidence intervals. To do so, we first need to creat the `all_fx`, `family_list` and `alphas` objects. `all_fx` takes in a vector containing our previously made contrasts tables. For `family_list`, we run some code that creates a list equal to the length of the `all_fx` object containing "b" at each interval to indicate all our contrasts are between-subjects. Finally, set `alphas` to the nominal ⍺ = 0.05. This will then be adjusted by the `psyci()` function to ensure the alpha is appropriate per contrast.
+
+Next, create the object `smr_params` using the `list()` function. Within the function call, set p as p (previously assigned 2, for ), set q as q (previously assigned 2, for ). Additionally, you may set a n_sim and seed value for future replication of the smr distribution.
+
+Finally, create the `output` object by calling `psyci()`, setting the following:
+
+- The model is set as the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
+
+- The contrast_tables argument is set as the previously made `all_fx` list.
+
+- The method is set as "smr", ...elaborate.
+
+- The family list is set as the previously made `familt_list` object, which contains a list equal in length to the `all_fx` object with a "b" at each interval (to indicate between-subjects analysis is appropriate). The family_list must take in a list of the same length as contrast_tables.
+
+- The between_factors argument takes in a list of between-subjects factor names for our two independent variables.
+
+- Alpha is set at `alphas` (both here and by default), indicating the desired type I error rate. `psyci()` will adjust the nominal ⍺ to be appropriate per contrast.
 
 ```{r SMR_correction}
 all_fx <- c(mfx, int, nvh_simp_fx, sdep_simp_fx) 
@@ -183,21 +199,25 @@ smr_params <- list(
   seed = 42 # set seed if you want to replicate simulation of smr distribution
 )
 
-psyci(
+output <- psyci(
   model = mod,
   contrast_tables = all_fx,
   method = "smr",
-  smr_params = smr_params,
   family_list = family_list,
   between_factors = list("sleep_deprivation", "nvh"),
-  alpha = alphas
-) %>%
+  alpha = alphas,
+  smr_params = smr_params
+) 
+
+output %>%
   bind_rows() %>%
   relocate(contrast, sleep_deprivation, nvh) %>%
   knitr::kable(digits = 3)
 ```
 
 ## The PsyR contribution: Simultaneous Confidence Intervals
+
+
 
 Info from Bird & Hadzi-Pavlovic (2005). See page 359 for SMR parameters.
 See p 360 for the conversion of SMR into a critical constant.
