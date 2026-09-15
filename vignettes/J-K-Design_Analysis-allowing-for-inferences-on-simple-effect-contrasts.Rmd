@@ -7,7 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-A vignette to do x y z
+<!-- A vignette to do x y z -->
 
 This is appropriate because...
 
@@ -111,7 +111,9 @@ therapy_contrasts = list(
 )  
 ```
 
-## First, let's sort the A and A(b) and AB family
+## Simple Effects
+
+First, let's sort the A and A(b) and AB family
 
 Calculate the main effects for factor A
 
