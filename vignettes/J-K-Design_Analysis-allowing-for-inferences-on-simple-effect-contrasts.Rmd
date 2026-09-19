@@ -7,7 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-<!-- A vignette to do x y z -->
+A vignette to do x y z
 
 This is appropriate because...
 
@@ -32,7 +32,7 @@ library(tidyverse)
 
 ## The data
 
-The `experience` dataframe contains the results of a between-subjects experiment examining the impact of years of experience (10, 3, less than 1) held by a therapist on therapy outcomes across therapy types (Behavioural, Cognitive, Psychotherapy and Group Therapy). A higher score on the dependent variable (outcome of therapy) is indicative of a better outcome. 
+The `experience` dataframe contains the results of a between-subjects experiment examining the interaction between years of experience held by a therapist (10, 3, or less than 1) and type of therapy (Behavioural, Cognitive, Psychotherapy and Group Therapy). A higher score on the dependent variable (outcome of therapy) is indicative of a better outcome. 
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
