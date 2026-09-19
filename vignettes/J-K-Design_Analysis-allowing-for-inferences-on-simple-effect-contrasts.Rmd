@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-## The packages
+## The Packages
 
 To use PsyR to calculate confidence intervals over contrast effects, we will utilise a workflow with functions from [afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to implement ANOVA models, and [emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated marginal means and the required contrast estimates. So let's load those packages, and any others that are helpful for our workflow.
 
@@ -30,9 +30,9 @@ library(PsyR)
 library(tidyverse)
 ```
 
-## The data
+## The Data
 
-The `experience` dataframe contains the results of a between-subjects experiment examining the interaction between years of experience held by a therapist (10, 3, or less than 1) and type of therapy (Behavioural, Cognitive, Psychotherapy and Group Therapy). A higher score on the dependent variable (outcome of therapy) is indicative of a better outcome. 
+The `experience` dataframe contains the results of a between-subjects experiment examining the interaction between years of experience held by a therapist (10, 3, or less than 1) and type of therapy (Behavioural, Cognitive, Psychotherapy and Group Therapy). A higher score on the dependent variable (outcome of therapy) is indicative of improved mental health.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -54,11 +54,11 @@ experience <- experience %>%
   mutate(
     Experience = factor(
       Experience, 
-      levels = c("10yrs", "3yrs", "<1yr")
+      levels = c("<1yr", "3yrs", "10yrs")
     ),
     Therapy = factor(
       Therapy,
-      levels = c("Behavioural", "Cognitive", "Psychotherapy", "Group")
+      levels = c("Group", "Psychotherapy", "Cognitive", "Behavioural")
     )
   )
 ```
@@ -66,22 +66,22 @@ experience <- experience %>%
 Next, let's visualise our data. Doing so allows us to more intuitively
 understand its layout.
 
-```{r boxplotit, fig.width = 7, fig.height = 4, dev = 'svg'}
+```{r plotit, fig.width = 7, fig.height = 4, dev = 'svg'}
 experience %>% 
-  ggplot(aes(x = Therapy, y = Outcome, fill = Experience)) +
-  geom_boxplot() + 
+  ggplot(aes(x = Experience, y = Outcome, colour = Therapy, fill = Therapy, shape = Therapy)) +
+  stat_summary(fun = mean, geom = "point", size = 3, aes(group = Therapy)) +
+  stat_summary(fun = mean, geom = "line", aes(group = Therapy)) +
+  scale_shape_manual(values = c(21:24)) +
   theme_classic(base_size = 14)
-
 ```
 
-##The Analysis
+## The Analysis
 
 Let's prepare to run some statistical tests!
 
 Here we will create the building blocks for first an ANOVA output, and
-later our SCIs. To start, let's run our ANOVA and save it in the `mod`
-object. Of note, defining mod in this way enables emmeans to compute
-estimated marginal means from which to apply contrasts of interest.
+later our SCIs. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining mod in the way we will now describe enables emmeans to compute
+estimated marginal means from which to apply contrasts of interest. Place the "SubjID" column in the ID argument, "Outcome" as our dependent variable, `experience` as our dataframe, and "Experience" and "Therapy" as our between-subjects factors, and "Session". Finally, create the `emms` object by calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to both "Experience" and "Therapy". Running this code will give us the estimated marginal means for each level of the between-subjects independent variables.
 
 ```{r, aov}
 # perform the statistical model
@@ -93,50 +93,64 @@ mod <- aov_ez(
 )
 
 emms <- emmeans(mod, c("Experience", "Therapy"))
-emms
+knitr::kable(emms, digits = 3)
 ```
 
-First, define the factor A (Experience of therapist) contrasts
+Now let's define and obtain our Factor A (Experience of Therapist) and Factor B (Type of Therapy) contrasts. To do so, create the `experience_contrasts` and `therapy_contrasts` objects, calling `list()` to define our contrasts which compare the following:
+
+**Experience**
+
+- "10yrs - <1yr" ➞ The difference between a therapist with 10 years of experience and a therapist with less than 1 year of experience, averaged across types of therapy.
+
+- "10yrs - 3yrs" ➞ The difference between a therapist with 10 years of experience and a therapist with 3 years of experience, averaged across types of therapy.
+
+**Therapy**
+
+- "Group~Psych - Cog~Beh" ➞ The difference between the average of outcomes of Group and Psychotherapy versus Cognitive and Behavioural therapy, averaged across levels of therapist experience.
+
+- "Group - Psych" ➞ The difference between the average of Group Therapy versus Psychotherapy, averaged across levels of therapist experience.
+
+- "Cog - Beh" ➞ The difference between the average of Cognitive Therapy versus Behavioural Therapy, averaged across levels of therapist experience.
 
 ```{r btwn_contrasts}
 experience_contrasts = list(
-  "lots - little" = c(0, 1, -1),
-  "lots - some" = c(1, -1, 0)
+  "10yrs - <1yr" = c(-1, 0, 1),
+  "10yrs - 3yrs" = c(0, -1, 1)
 )
 
 therapy_contrasts = list(
-  "evidence - woowoo" = c(0.5, 0.5, -0.5, -0.5),
-  "behav - cog" = c(1, -1, 0, 0),
-  "woo1 - woo2" = c(0, 0, 1, -1)
+  "Group~Psych - Cog~Beh" = c(0.5, 0.5, -0.5, -0.5),
+  "Group - Psych" = c(1, -1, 0, 0),
+  "Cog - Beh" = c(0, 0, 1, -1)
 )  
 ```
 
-## Simple Effects
+### Simple Effects
 
-First, let's sort the A and A(b) and AB family
+Now, let's sort the A and A(b) and AB family
 
-Calculate the main effects for factor A
+To start, we need to calculate the main effects for factor A (Experience). To do so, INSERT HERE
 
 ```{r, factor_a_fx}
 emms_exp <- emmeans(mod, c("Experience"))
 exp_fx <- contrast(emms_exp, experience_contrasts, adjust = "bonferroni")
-exp_fx
+knitr::kable(exp_fx, digits = 3)
 ```
 
-Now let's get the A(b) effects
+Now let's get the A(b) effects.
 
 ```{r, A_b}
-
 Exp_g_therapy <- emmeans(mod, ~ Experience | Therapy)
+
 Ab_fx <- contrast(
   Exp_g_therapy, 
   method = experience_contrasts, 
   adjust = "bonferroni"
 )
-
+knitr::kable(Ab_fx, digits = 3)
 ```
 
-And last, the AB effects
+Finally, let's get our AB interaction effects
 
 ```{r, AB}
 interaction_fx <- contrast(
@@ -144,14 +158,14 @@ interaction_fx <- contrast(
   interaction = list(experience_contrasts, therapy_contrasts),
   adjust = "bonferroni"
 )
-interaction_fx
+knitr::kable(interaction_fx, digits = 3)
 ```
 
 For a priori, bonferroni method:
 
 Now we have our 3 sets of contrasts (all appropriately scaled).
 The Bonferroni adjustment must be made at 
-alpha = 0.5x2 for the A(B) family (or alpha=0.05x3, if using the all factorial model). 
+alpha = 0.05x2 for the A(B) family (or alpha=0.05x3, if using the all factorial model). 
 alpha is divided by k, which = number of planned contrasts in the family.
 Note that the A(B) family includes A simple effects contrasts, A main effects contrasts, and AB interaction contrasts.
 v2 = N-JK (df error)
@@ -166,7 +180,7 @@ Thus k = 16, alpha = .1, for all families (as they are actually one family, as a
 ```{r, get_cis}
 all_fx <- c(exp_fx, Ab_fx, interaction_fx)
 family_list = list("b") # to be documented
-alphas = rep(list(2*.05), times=3)
+alphas = rep(list(2*.05), times = 3)
 
 psyci(
   model = mod, 
@@ -176,9 +190,12 @@ psyci(
   between_factors = list("Therapy", "Experience"), 
   alpha = alphas,
   independent = FALSE
-)
+) %>%
+  bind_rows() %>%
+  rename(Experience = contrast )%>%
+  relocate(Experience, Therapy, Experience_custom, Therapy_custom) %>%
+  knitr::kable(digits = 3)
 ```
-
 
 Now do the post-hoc analysis including A(B) contrasts.
 
@@ -189,8 +206,6 @@ To calculate nu1, where A has J levels and B has K levels
 
 A(B) = K*(J-1) so A relates to Experience
 B(A) = J*(K-1)
-
-
 
 ```{r get_cis_ph}
 alphas = rep(list(1 - (1 - 0.05)^2), times = 3)
@@ -206,22 +221,26 @@ psyci(
   alpha = alphas,
   independent = FALSE, 
   nu1 = nu1
-)
+) %>%
+  bind_rows() %>%
+  rename(Experience = contrast )%>%
+  relocate(Experience, Therapy, Experience_custom, Therapy_custom) %>%
+  knitr::kable(digits = 3)
 ```
 
 Now do a standard analysis with independent families, using the planned bonferonni procedure.
 
 Calculate the main effects for factor B
 
-```{r, factor_a_fx}
+```{r, factor_b_fx}
 emms_exp <- emmeans(mod, c("Therapy"))
 thrpy_fx <- contrast(emms_exp, therapy_contrasts)
-thrpy_fx
-
 stndrd_fx = list(exp_fx, thrpy_fx, interaction_fx)
 ```
 
 Now get the CIs for the main effects and interactions, with no simple effects
+
+note that independent can be set to true and that alpha at 0.05 (i.e. no need for bonferonni procedure)
 
 ```{r get_cis_no_sfx}
 psyci(
@@ -231,5 +250,16 @@ psyci(
   family_list = list("b"), 
   between_factors = list("Therapy", "Experience"), 
   alpha = 0.05
-)
+) %>%
+  bind_rows() %>%
+  relocate(contrast, Experience_custom, Therapy_custom) %>%
+  knitr::kable(digits = 3)
 ```
+
+------------------------------------------------------------------------
+
+```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
+knitr::include_graphics("../man/figures/PsyR.png")
+```
+
+------------------------------------------------------------------------
