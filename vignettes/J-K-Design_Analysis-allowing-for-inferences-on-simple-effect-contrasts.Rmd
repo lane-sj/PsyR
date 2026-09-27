@@ -7,9 +7,9 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-A vignette to demonstrate how to conduct either a planned or post-hoc analysis of simple effects contrasts in a J x K design. Simple effects contrasts to analyse cell mean differences at one level of a factor by the level (or levels) of the other factor. This is relevant when trying to understand what may be driving an interaction effect, as an interaction effect contrast may be partitioned into two simple effects contrasts. 
+A vignette to demonstrate how to conduct either a planned or post-hoc analysis of simple effects contrasts in a J x K design. Simple effects contrasts to analyse cell mean differences at one level of a factor by the level (or levels) of the other factor. This is relevant when trying to understand what may be driving an interaction effect, as an interaction effect contrast may be partitioned into two simple effects contrasts.
 
-In partitioning analysis out at the individual level of a factor, a simple effects analysis produces non-orthogonal families which are incompatible with how an ANOVA F-STP (Simultaneous Test Procedure) controls the FWER. Instead, and as will be demonstrated in this vignette, a simple effects analysis may define two families  - the A and B Simple Effects Families - which allows one to examine either (but not both) A or B simple effects. Alternatively, and at the cost of power as compared to defining two families, one may define a single non-standard all-factorial contrasts family, allowing for investigation of simple effects, main effects and interaction effects across all families. As such, the FWER is indirectly controlled by directly controlling the Per-Family Error Rate (PFER) at $m$ · ⍺, where $m$ is equal to the number of non-standard families defined. 
+In partitioning analysis out at the individual level of a factor, a simple effects analysis produces non-orthogonal families which are incompatible with how an ANOVA F-STP (Simultaneous Test Procedure) controls the FWER. Instead, and as will be demonstrated in this vignette, a simple effects analysis may define two families - the A and B Simple Effects Families - which allows one to examine either (but not both) A or B simple effects. Alternatively, and at the cost of power as compared to defining two families, one may define a single non-standard all-factorial contrasts family, allowing for investigation of simple effects, main effects and interaction effects across all families. As such, the FWER is indirectly controlled by directly controlling the Per-Family Error Rate (PFER) at $m$\$m\$ · ⍺, where $m$ is equal to the number of non-standard families defined.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -21,7 +21,6 @@ knitr::opts_chunk$set(
 ## The Packages
 
 To use PsyR to calculate confidence intervals over contrast effects, we will utilise a workflow with functions from [afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to implement ANOVA models, and [emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated marginal means and the required contrast estimates. So let's load those packages, and any others that are helpful for our workflow.
-
 
 ```{r, loadpackages, message = FALSE, warning = FALSE}
 library(afex)
@@ -63,8 +62,7 @@ experience <- experience %>%
   )
 ```
 
-Next, let's visualise our data. Doing so allows us to more intuitively
-understand its layout.
+Next, let's visualise our data. Doing so allows us to more intuitively understand its layout.
 
 ```{r plotit, fig.width = 7, fig.height = 4, dev = 'svg'}
 experience %>% 
@@ -79,8 +77,7 @@ experience %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and
-later our Simple Effects Contrast Intervals. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining mod in the following way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the "SubjID" column in the ID argument, "Outcome" as our dependent variable, `experience` as our dataframe, and "Experience" and "Therapy" as our between-subjects factors. Finally, create the `emms` object by calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to both "Experience" and "Therapy". Running this code will give us the estimated marginal means for each level of the between-subjects independent variables.
+Here we will create the building blocks for first an ANOVA output, and later our Simple Effects Contrast Intervals. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining mod in the following way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the "SubjID" column in the ID argument, "Outcome" as our dependent variable, `experience` as our dataframe, and "Experience" and "Therapy" as our between-subjects factors. Finally, create the `emms` object by calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to both "Experience" and "Therapy". Running this code will give us the estimated marginal means for each level of the between-subjects independent variables.
 
 ```{r, aov}
 # perform the statistical model
@@ -99,13 +96,13 @@ Now let's define and obtain our Factor A (Experience of Therapist) and Factor B 
 
 **Experience**
 
-- "10yrs - <1yr" ➞ The difference between a therapist with 10 years of experience and a therapist with less than 1 year of experience, averaged across types of therapy.
+- "10yrs - \<1yr" ➞ The difference between a therapist with 10 years of experience and a therapist with less than 1 year of experience, averaged across types of therapy.
 
 - "10yrs - 3yrs" ➞ The difference between a therapist with 10 years of experience and a therapist with 3 years of experience, averaged across types of therapy.
 
 **Therapy**
 
-- "Group~Psych - Cog~Beh" ➞ The difference between the average of outcomes of Group and Psychotherapy versus the average of Cognitive and Behavioural therapy, averaged across levels of therapist experience.
+- "Group\~Psych - Cog\~Beh" ➞ The difference between the average of outcomes of Group and Psychotherapy versus the average of Cognitive and Behavioural therapy, averaged across levels of therapist experience.
 
 - "Group - Psych" ➞ The difference between the average of Group Therapy versus Psychotherapy, averaged across levels of therapist experience.
 
@@ -135,9 +132,10 @@ emms_exp <- emmeans(mod, c("Experience"))
 exp_fx <- contrast(emms_exp, experience_contrasts, adjust = "bonferroni")
 knitr::kable(exp_fx, digits = 3)
 ```
+
 Now let's get the A(b) effects, i.e. contrasts of each main effect at the four levels of Factor B (Therapy). To do so, create `Exp_g_therapy` and call `emmeans()`, which will take in a model which attempts to predict our previously made `mod` (which, as a reminder, is an ANOVA table containing simultaneous tests of the main effects of Experience, Therapy, and their interaction) by using scores on Experience holding constant Therapy type. This yields the estimated marginal means of each cell, that is each level of Experience at each level of Therapy.
 
-To obtian our simple effects of our Factor A contrasts at each level of Factor B, create `Ab_fx` and call `contrast()`. Place `Exp_g_therapy` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. This will save the results of significance tests of our Factor A contrasts (10yrs - <1yr, and 10yrs - 3yrs) at each level of Therapy.
+To obtain our simple effects of our Factor A contrasts at each level of Factor B, create `Ab_fx` and call `contrast()`. Place `Exp_g_therapy` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. This will save the results of significance tests of our Factor A contrasts (10yrs - \<1yr, and 10yrs - 3yrs) at each level of Therapy.
 
 ```{r, A_b}
 Exp_g_therapy <- emmeans(mod, ~ Experience | Therapy)
@@ -163,66 +161,29 @@ knitr::kable(interaction_fx, digits = 3)
 
 ## Applying PsyR to generate Confidence Intervals
 
-We will now demonstrate how to generate Confidence Intervals for first an a priori analysis of the A(b) family, and later for a post-hoc analysis of the A(b) family. As a reminder, the A(b) family includes A simple effects contrasts, A main effects contrasts, and AB interaction contrasts.
+We will now demonstrate how to generate Confidence Intervals for first a post-hoc analysis of the A(b) family, and later for an a priori analysis of the A(b) family. As a reminder, the A(b) family includes A simple effects contrasts, A main effects contrasts, and AB interaction contrasts.
 
-### A Priori Analysis with a Bonferroni Adjustment
+### Post-hoc Analysis with a Scheffé adjustment
 
-Having created our 3 sets of appropriately scaled contrasts, we will now enact a Bonferroni adjustment to indirectly control our FWER (via the PFER) at or below the nominal ⍺. This may be achieved through multiplying $m · ⍺$ ($2 · .05 = .01$) and then dividing the result by $k$, where $m$ is equal to the number of non-standard families defined and $k$ is equal to the number of planned contrasts within the family. In our Factor A main effects family, $k = 2$, A(b) $k = 6$, AB $k = 16$. Finally, we must define ν~2~ which is equal to $N - JK$ ($132 - 3 · 4 = 120$). These calculations will soon be fed into `psyci()` to generate appropriate confidence intervals.
+We will now demonstrate how to conduct a post-hoc analysis including A(b) contrasts. Engaging in this method allows one to address contrasts of interest which may emerge post data collection, however this comes at the cost of lowered statistical power as compared to an A Priori approach.
 
-However, we must first do the following. Create the object `all_fx` by creating a vector containing lists of the results of significance tests on our Factor A main effects contrasts, A(b) simple effects contrasts, and AB interaction contrasts. Next, create `family_list` and run some code that creates a list equal to the length
-of the `all_fx` object containing "b" at each interval to indicate all contrasts are between-subjects. Finally, create `alphas` to output a list of length 3 (to match the length of `all_fx`) indicating that the appropriate ⍺ for each family is .01.
+To run our post-hoc analysis, let's do the following. First, create `alphas` which will output a list of length 3 (so as to match the length our `all_fx` object which contains a list of 3 contrast tables), where $⍺ = 1 - (1 - ⍺)^m$ and $m = 2$ (as there are two standard factorial families contained within the non-standard simple effects family we are analysing). Thus, ⍺ is set at .025 per family. Next, we must calculate ν~1~ and store it within the `nu1` object. Here, $ν~1~ = K(J-1)$, so we will run code which captures the number of unique levels of K (Therapy; K = 4) and of J - 1 (Experience; J = 3 ∴ J - 1 = 2). Thus, ν~1~ = 8.
 
-Finally, call `psyci()`, setting the following:
+Next, we will call `psyci()` and input the following.
 
-- The model is set as the previously made `mod` object, where the model
-  must be made using the afex package (and of class afex_aov).
+- The model is set as the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
 
-- The contrast_tables argument is set as the previously made `all_fx`
-  list.
+- The contrast_tables argument is set as the previously made `all_fx` list.
 
-- The method is set as "bf" to indicate a Bonferroni adjustment should be enacted.
+- The method is set as "ph" to indicate a Scheffé adjustment should be enacted.
 
-- The family list is set as the previously made `family_list` object,
-  which contains a list equal in length to the `all_fx` object with a
-  "b" at each interval (to indicate between-subjects analysis is
-  appropriate). The family_list argument must take in a list of the same
-  length as contrast_tables.
+- The family list is set as a list of length one containing "b" to indicating our independent variables are between-subjects. Note that the family_list argument must take in a list of the same length as contrast_tables.
 
-- The between_factors argument takes in a list of between-subjects
-  factor names for our two independent variables.
+- The between_factors argument takes in a list of between-subjects factor names for our two independent variables.
 
-- Alpha is set at `alphas`, indicating the desired type I error rate should be set per family at .01 (as we previously established.
+- Alpha is set at `alphas`, indicating the desired type I error rate should be set per family at .025 (as we previously established).
 
 - Finally, set independent as false. Independent takes in either TRUE or FALSE. By default it is set at TRUE, indicating that the correction set in "method" should be applied to each family individually. As we are running a simple effects analysis where we have defined a Factor A family, we need independent to be FALSE to appropriately control the type I error rate.
-```{r, get_cis}
-all_fx <- c(exp_fx, Ab_fx, interaction_fx)
-family_list = list("b") # to be documented
-alphas = rep(list(2*.05), times = 3)
-
-psyci(
-  model = mod, 
-  contrast_tables = all_fx, 
-  method = "bf", 
-  family_list = list("b"),
-  between_factors = list("Therapy", "Experience"), 
-  alpha = alphas,
-  independent = FALSE
-) %>%
-  bind_rows() %>%
-  rename(Experience = contrast )%>%
-  relocate(Experience, Therapy, Experience_custom, Therapy_custom) %>%
-  knitr::kable(digits = 3)
-```
-
-Now do the post-hoc analysis including A(B) contrasts.
-
-This is only Scheffe, as all are between.
-Alphas = 1-(1-alpha)^m (where m = number of standard factorial families contained within the non-standard simple effects family).
-
-To calculate nu1, where A has J levels and B has K levels
-
-A(B) = K*(J-1) so A relates to Experience
-B(A) = J*(K-1)
 
 ```{r get_cis_ph}
 alphas = rep(list(1 - (1 - 0.05)^2), times = 3)
@@ -233,7 +194,7 @@ psyci(
   model = mod, 
   contrast_tables = all_fx, 
   method = "ph", 
-  family_list = list("b"),
+  family_list = list("b"),###sadie q: why does this not have to be same length as contrast_tables?
   between_factors = list("Therapy", "Experience"), 
   alpha = alphas,
   independent = FALSE, 
@@ -245,19 +206,21 @@ psyci(
   knitr::kable(digits = 3)
 ```
 
-Now do a standard analysis with independent families, using the planned bonferonni procedure.
+### A Priori Analysis
 
-Calculate the main effects for factor B
+The following section will detail how to conduct an a priori analysis, first of Main and Interaction Effects Contrasts, and second of Simple Effects Contrasts. In doing so, we aim to demonstrate how a Simple Effects analysis may provide greater clarity to interaction contrasts, as well as how this analysis must be adjusted as compared to an F-STP approach to Main and Interaction Effects.
+
+#### Main And Interaction Effects
+
+We will now demonstrate a standard analysis with independent families of the Main and Interaction Effects. First, we must calculate the main effects for Factor B - Therapy. To do soo, create  `emms_thrpy` and call `emmeans()`, placing `mod` in the "model" argument and the "Therapy" column in the "Specs" argument. Next, create`thrpy_fx` by calling `contrast()`. Place our newly made `emms_thrpy` in the "Object" argument and `therapy_contrasts` in the "Method" argument. Thus, `thrpy_fx` will contain the results of a main effects analysis of Factor B (Therapy). Finally, create `stndrd_fx` which will contain a list of our main effects for factor A and B as well as their interactions. 
 
 ```{r, factor_b_fx}
-emms_exp <- emmeans(mod, c("Therapy"))
-thrpy_fx <- contrast(emms_exp, therapy_contrasts)
+emms_thrpy <- emmeans(mod, c("Therapy"))
+thrpy_fx <- contrast(emms_thrpy, therapy_contrasts)
 stndrd_fx = list(exp_fx, thrpy_fx, interaction_fx)
 ```
 
-Now get the CIs for the main effects and interactions, with no simple effects
-
-note that independent can be set to true and that alpha at 0.05 (i.e. no need for bonferonni procedure)
+Now let's get the CIs for the main effects and interactions (with no simple effects). Unlike when conducting a simple effects analysis, ⍺ is controlled via the FWER (rather than the PFER) and thus may be universally set at .05. Likewise, analysis is independent, thus independent may be set as TRUE (as it is by default).
 
 ```{r get_cis_no_sfx}
 psyci(
@@ -272,6 +235,54 @@ psyci(
   relocate(contrast, Experience_custom, Therapy_custom) %>%
   knitr::kable(digits = 3)
 ```
+
+#### Simple Effects
+
+Having created our 3 sets of appropriately scaled contrasts, we will now enact a Bonferroni adjustment to indirectly control our FWER (via the PFER) at or below the nominal ⍺. This may be achieved through multiplying $m · ⍺$ ($2 · .05 = .01$) and then dividing the result by $k$, where $m$ is equal to the number of non-standard families defined and $k$ is equal to the number of planned contrasts within the family. In our Factor A main effects family, $k = 2$, A(b) $k = 6$, AB $k = 16$. Finally, we must define ν~2~ which is equal to $N - JK$ ($132 - 3 · 4 = 120$). These calculations will soon be fed into `psyci()` to generate appropriate confidence intervals.
+
+However, we must first do the following. Create the object `all_fx` by creating a vector containing lists of the results of significance tests on our Factor A main effects contrasts, A(b) simple effects contrasts, and AB interaction contrasts. Next, create `family_list` and run some code that creates a list equal to the length of the `all_fx` object containing "b" at each interval to indicate all contrasts are between-subjects. Finally, create `alphas` to output a list of length 3 (to match the length of `all_fx`) indicating that the appropriate ⍺ for each family is .01.
+
+Finally, call `psyci()`, setting the following:
+
+- The model is set as the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
+
+- The contrast_tables argument is set as the previously made `all_fx` list.
+
+- The method is set as "bf" to indicate a Bonferroni adjustment should be enacted.
+
+- The family list is set as a list of length one containing "b" to indicating our independent variables are between-subjects. Note that the family_list argument must take in a list of the same length as contrast_tables.
+
+- The between_factors argument takes in a list of between-subjects factor names for our two independent variables.
+
+- Alpha is set at `alphas`, indicating the desired type I error rate should be set per family at .01 (as we previously established).
+
+- Finally, set independent as false. Independent takes in either TRUE or FALSE. By default it is set at TRUE, indicating that the correction set in "method" should be applied to each family individually. As we are running a simple effects analysis where we have defined a Factor A family, we need independent to be FALSE to appropriately control the type I error rate.
+
+```{r, get_cis}
+all_fx <- c(exp_fx, Ab_fx, interaction_fx)
+family_list = list("b") # to be documented
+alphas = rep(list(2*.05), times = 3)
+
+psyci(
+  model = mod, 
+  contrast_tables = all_fx, 
+  method = "bf", 
+  family_list = list("b"),###sadie q: why does this not have to be same length as contrast_tables?
+  between_factors = list("Therapy", "Experience"), 
+  alpha = alphas,
+  independent = FALSE
+) %>%
+  bind_rows() %>%
+  rename(Experience = contrast )%>%
+  relocate(Experience, Therapy, Experience_custom, Therapy_custom) %>%
+  knitr::kable(digits = 3)
+```
+
+## The Interpretation
+
+This is what the interaction was:
+
+and this is what was driving it:
 
 ------------------------------------------------------------------------
 
