@@ -167,7 +167,7 @@ We will now demonstrate how to generate Confidence Intervals for first a post-ho
 
 We will now demonstrate how to conduct a post-hoc analysis including A(b) contrasts. Engaging in this method allows one to address contrasts of interest which may emerge post data collection, however this comes at the cost of lowered statistical power as compared to an A Priori approach.
 
-To run our post-hoc analysis, let's do the following. First, create `alphas` which will output a list of length 3 (so as to match the length our `all_fx` object which contains a list of 3 contrast tables), where $⍺ = 1 - (1 - ⍺)^m$ and $m = 2$ (as there are two standard factorial families contained within the non-standard simple effects family we are analysing). Thus, ⍺ is set at .025 per family. Next, we must calculate ν~1~ and store it within the `nu1` object. Here, $ν~1~ = K(J-1)$, so we will run code which captures the number of unique levels of K (Therapy; K = 4) and of J - 1 (Experience; J = 3 ∴ J - 1 = 2). Thus, ν~1~ = 8.
+To run our post-hoc analysis, let's do the following. First, create the object `all_fx` by creating a vector containing lists of the results of significance tests on our Factor A main effects contrasts, A(b) simple effects contrasts, and AB interaction contrasts. Next, create `alphas` which will output a list of length 3 (so as to match the length our `all_fx` object which contains a list of 3 contrast tables), where $⍺ = 1 - (1 - ⍺)^m$ and $m = 2$ (as there are two standard factorial families contained within the non-standard simple effects family we are analysing). Thus, ⍺ is set at .025 per family. Next, we must calculate ν~1~ and store it within the `nu1` object. Here, $ν~1~ = K(J-1)$, so we will run code which captures the number of unique levels of K (Therapy; K = 4) and of J - 1 (Experience; J = 3 ∴ J - 1 = 2). Thus, ν~1~ = 8.
 
 Next, we will call `psyci()` and input the following.
 
@@ -186,6 +186,7 @@ Next, we will call `psyci()` and input the following.
 - Finally, set independent as false. Independent takes in either TRUE or FALSE. By default it is set at TRUE, indicating that the correction set in "method" should be applied to each family individually. As we are running a simple effects analysis where we have defined a Factor A family, we need independent to be FALSE to appropriately control the type I error rate.
 
 ```{r get_cis_ph}
+all_fx <- c(exp_fx, Ab_fx, interaction_fx)
 alphas = rep(list(1 - (1 - 0.05)^2), times = 3)
 nu1 = length(unique(levels(experience$Therapy))) * 
       (length(unique(levels(experience$Experience))) - 1)
@@ -240,7 +241,7 @@ psyci(
 
 Having created our 3 sets of appropriately scaled contrasts, we will now enact a Bonferroni adjustment to indirectly control our FWER (via the PFER) at or below the nominal ⍺. This may be achieved through multiplying $m · ⍺$ ($2 · .05 = .01$) and then dividing the result by $k$, where $m$ is equal to the number of non-standard families defined and $k$ is equal to the number of planned contrasts within the family. In our Factor A main effects family, $k = 2$, A(b) $k = 6$, AB $k = 16$. Finally, we must define ν~2~ which is equal to $N - JK$ ($132 - 3 · 4 = 120$). These calculations will soon be fed into `psyci()` to generate appropriate confidence intervals.
 
-However, we must first do the following. Create the object `all_fx` by creating a vector containing lists of the results of significance tests on our Factor A main effects contrasts, A(b) simple effects contrasts, and AB interaction contrasts. Next, create `family_list` and run some code that creates a list equal to the length of the `all_fx` object containing "b" at each interval to indicate all contrasts are between-subjects. Finally, create `alphas` to output a list of length 3 (to match the length of `all_fx`) indicating that the appropriate ⍺ for each family is .01.
+However, we must first do the following. Next, create `family_list` and run some code that creates a list equal to the length of the `all_fx` object containing "b" at each interval to indicate all contrasts are between-subjects. Finally, create `alphas` to output a list of length 3 (to match the length of `all_fx`) indicating that the appropriate ⍺ for each family is .01.
 
 Finally, call `psyci()`, setting the following:
 
@@ -259,7 +260,6 @@ Finally, call `psyci()`, setting the following:
 - Finally, set independent as false. Independent takes in either TRUE or FALSE. By default it is set at TRUE, indicating that the correction set in "method" should be applied to each family individually. As we are running a simple effects analysis where we have defined a Factor A family, we need independent to be FALSE to appropriately control the type I error rate.
 
 ```{r, get_cis}
-all_fx <- c(exp_fx, Ab_fx, interaction_fx)
 family_list = list("b") # to be documented
 alphas = rep(list(2*.05), times = 3)
 
@@ -280,9 +280,22 @@ psyci(
 
 ## The Interpretation
 
-This is what the interaction was:
+Simple Effects Contrasts are of most use in helping understand what is driving an interaction effect. To demonstrate this, let's examine interaction between **10yrs - <1yr × Group~Psych - Cog~Beh**, as well as its constituent simple effects contrasts.
 
-and this is what was driving it:
+This interaction looks at how the experience of a therapist (10 years versus less than 1 year) diferentially impacts the outcomes of Therapy (the average of Group and Psychotherapy versus the average of Cognitive and Behavioural). As a first port of call, it is helpful to return to our visualisation of the data, which intuitively shows that experience of a therapist seems to matter far more for Group and Psychotherapy than it does for Cognitive and Behavioural. By looking at the output from our main and interaction effects analysis, we can see that this effect is statistically significant (p < .001), where the difference between years of experience leads to an increase on the DV (outcome of therapy) that is felt more by the average of Group~Psych than the average of Cog~Beh, where the difference between the two Factor B groups ranges from 7.196 to 20.804 points. This interpretation, while correct, is not especially useful. Specifically, we cannot quantify with inferential statistics whether this effect is being driven by either group of therapy (Group~Psych versus Cog~Beh)
+
+The current interaction may be partitioned into its two constituent simple effects contrasts: **10 yrs - <1yr × Group~Psych** and **10 yrs - <1yr × Cog~Beh**. From these, we learn the following:
+
+- **10 yrs - <1yr × Group~Psych:** There is a statistically significant effect (p <.001) where therapists with 10 years of experience outperform those with less than 1yr of experience when administering either Group or Psychotherapy, with this outperformance ranging from between 6.94 and 21.06 more points of increased wellbeing for patients.
+
+- **10 yrs - <1yr × Cog~Beh:** There is insufficient evidence to detect a statistically significant effect (p = .789); Therapists with 10 years of experience as compared to those with < 1 year of experience, when administering Cognitive or Behavioural therapies, may outperform therapists with <1 year of experience by patients scoring 9.06 more points of wellbeing, or may underperform as compared to therapists with < 1 year of experience by patients scoring -5.06 points.
+
+
+
+
+
+
+
 
 ------------------------------------------------------------------------
 
