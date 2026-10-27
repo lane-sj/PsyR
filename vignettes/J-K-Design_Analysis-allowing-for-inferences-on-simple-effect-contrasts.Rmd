@@ -37,7 +37,6 @@ The `experience` dataframe contains the results of a between-subjects experiment
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
 ```{r loaddata}
-
 data(experience)
 head(experience, 5)
 ```
@@ -86,7 +85,6 @@ Let's prepare to run some statistical tests!
 Here we will create the building blocks for first an ANOVA output, and later our Simple Effects Contrast Intervals. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining mod in the following way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the "SubjID" column in the ID argument, "Outcome" as our dependent variable, `experience` as our dataframe, and "Experience" and "Therapy" as our between-subjects factors. Finally, create the `emms` object by calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to both "Experience" and "Therapy". Running this code will give us the estimated marginal means for each level of the between-subjects independent variables.
 
 ```{r, aov}
-
 # perform the statistical model
 mod <- aov_ez(id="SubjID", 
               dv="Outcome", 
@@ -94,13 +92,12 @@ mod <- aov_ez(id="SubjID",
               between = c("Experience", "Therapy"))
 
 emms <- emmeans(mod, c("Experience", "Therapy"))
-emms
-
+knitr::kable(emms, digits = 3)
 ```
 
 Now let's define and obtain our Factor A (Experience of Therapist) and Factor B (Type of Therapy) contrasts. To do so, create the `experience_contrasts` and `therapy_contrasts` objects, calling `list()` to define our contrasts which compare the following:
 
-**Experience**
+**Experience (!NOTE TO SELF!)**
 
 - "10yrs - \<1yr" ➞ The difference between a therapist with 10 years of experience and a therapist with less than 1 year of experience, averaged across types of therapy.
 
@@ -116,7 +113,6 @@ Now let's define and obtain our Factor A (Experience of Therapist) and Factor B 
 
 
 ```{r btwn_contrasts}
-
 experience_contrasts = list(
   "lots_vs_little" = c(0, 1, -1),
   "lots_vs_some" = c(1, -1, 0)
@@ -127,7 +123,6 @@ therapy_contrasts = list(
   "behav_vs_cog" = c(1, -1, 0, 0),
   "woo1_vs_woo2" = c(0, 0, 1, -1)
 )  
-
 ```
 
 ### Simple Effects
@@ -192,7 +187,6 @@ Next, we will call `psyci()` and input the following.
 - Finally, set independent as false. Independent takes in either TRUE or FALSE. By default it is set at TRUE, indicating that the correction set in "method" should be applied to each family individually. As we are running a simple effects analysis where we have defined a Factor A family, we need independent to be FALSE to appropriately control the type I error rate.
 
 ```{r, get_cis_bf}
-
 all_fx <- c(exp_fx, Ab_fx, interaction_fx)
 alphas <- rep(list(2 * .05), times = 3)
 
@@ -203,7 +197,6 @@ psyci(
   alpha = alphas,
   independent = FALSE
 )
-
 ```
 
 ### Post-Hoc Analysis with a Scheffé adjustment
