@@ -137,7 +137,7 @@ The above analysis outputs two p-values, with most of them indicating a failure 
 
 - The method is set as "ph", creating confidence intervals (estimate ± SE · cc) using a post-hoc method [@bird2004].
 
-- Alpha is set at 0.05 (both here and by default), indicating the desired type I error rate.
+- Alpha is set at .05 (both here and by default), indicating the desired type I error rate.
 
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 

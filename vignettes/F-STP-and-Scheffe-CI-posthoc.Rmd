@@ -127,7 +127,7 @@ knitr::kable(btwn_fx, digits = 3)
 
 From the above output, the following conclusions may be drawn:
 
-- That significant differences exist in the "Fatigue - Alert", "Extreme - Mod, Mild", and "Low - High" contrasts (p \< 0.05). Fatigued participants make more driving errors than Alert participants, participants with Extreme fatigue make more driving errors than the average of participants with Mild and Moderate fatigue, and participants with High fatigue (the average of Extreme and Moderate) make more driving errors than those with Low fatigue (the average of Mild and Alert).
+- That significant differences exist in the "Fatigue - Alert", "Extreme - Mod, Mild", and "Low - High" contrasts (p \< .05). Fatigued participants make more driving errors than Alert participants, participants with Extreme fatigue make more driving errors than the average of participants with Mild and Moderate fatigue, and participants with High fatigue (the average of Extreme and Moderate) make more driving errors than those with Low fatigue (the average of Mild and Alert).
 
 - There is insufficient evidence to suggest a significant difference exists between participants with Mild fatigue and participants with no fatigue.
 
@@ -141,7 +141,7 @@ Such analysis establishes that significant effects exist in our chosen contrasts
 
 - PsyR infers that the original `emmGrid` contains a between-subjects family and identifies `Group` as its participating factor.
 
-- Alpha is set at 0.05 (both here and by default), indicating the desired type I error rate.
+- Alpha is set at .05 (both here and by default), indicating the desired type I error rate.
 
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
@@ -159,7 +159,7 @@ knitr::kable(contrasts_w_cis, digits = 3)
 
 In creating SCIs, we gain insight into the results which exceeds that of a traditional ANOVA contrast approach. An updated interpretation may look as follows.
 
-There is evidence of significant differences in the "Fatigue - Alert", "Extreme - Mod, Mild", and "Low - High" contrasts (p \< 0.05). Specifically:
+There is evidence of significant differences in the "Fatigue - Alert", "Extreme - Mod, Mild", and "Low - High" contrasts (p \< .05). Specifically:
 
 - Compared to Alert drivers, having any level of fatigue results in between 2.877 and 9.123 more driving errors.
 
