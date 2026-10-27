@@ -127,7 +127,6 @@ btwn_contrasts <- list(
 emms_btwn <- emmeans(mod, "Group")
 
 btwn_fx <- contrast(emms_btwn, btwn_contrasts)
-### note to self - p vals from emmeans rather than PsyR
 knitr::kable(btwn_fx, digits = 3)
 ```
 
@@ -149,7 +148,7 @@ win_contrasts <- list(
 ) 
 
 win_fx <- contrast(emms_win, win_contrasts)
-### note to self - p vals from emmeans rather than PsyR
+
 knitr::kable(win_fx, digits = 3)
 ```
 
@@ -164,13 +163,13 @@ int_fx <- contrast(
   emms_int,
   interaction = list(btwn_contrasts, win_contrasts)
 ) 
-### note to self - p vals from emmeans rather than PsyR
+
 knitr::kable(int_fx, digits = 3)
 ```
 
 ### A Priori Confidence Intervals
 
-To demonstrate the benefits of a post-hoc method, we must first showcase a planned analysis, with the purpose of highlighting that compared to a planned analysis, a post-hoc analysis accepts a loss statistical power in exchange for greater flexibility. Here we replicate the Bonferroni correction first presented in chapter 7 of @bird2004. To do so, let's first create the `all_fx` object which is a vector of the three contrast tables previously made. PsyR infers the family and participating factors for every original `emmGrid`. Next, call `psyci()` with the following arguments.
+To demonstrate the benefits of a post-hoc method, we must first showcase a planned analysis. This is to highlight that, compared to a planned analysis, a post-hoc analysis accepts a loss statistical power in exchange for greater flexibility. Here we replicate the Bonferroni correction first presented in chapter 7 of @bird2004. To do so, let's first create the `all_fx` object which is a vector of the three contrast tables previously made. Next, call `psyci()` with the following arguments.
 
 - The model is the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
 
@@ -178,16 +177,18 @@ To demonstrate the benefits of a post-hoc method, we must first showcase a plann
 
 - The method is set as "bf", creating SCIs (estimate ± SE · cc) using the Bonferroni-t procedure.
 
-- PsyR identifies the within, between, and between-by-within families and their participating factors from the model and contrast coefficients.
-
 - Alpha is set as the previously defined `alphas` where ⍺ = 0.05.
+
+Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
 ```{r, bon, message = FALSE, warning = FALSE}
 all_fx <- list(win_fx, btwn_fx, int_fx)
 alphas = .05 # 3 * alpha / nk
 
 psyci(
-  model = mod, contrast_tables = all_fx, method = "bf", 
+  model = mod, 
+  contrast_tables = all_fx, 
+  method = "bf", 
   alpha = alphas
 ) %>%
   unclass() %>%
@@ -198,7 +199,7 @@ psyci(
     within = Session_custom
     ) %>%
   relocate(main_effect, between, within) %>%
-  ### note to self - p vals from emmeans rather than PsyR
+  
   knitr::kable(digits = 3)
 ```
 
@@ -212,7 +213,9 @@ Using near-identical code, we will now demonstrate the post-hoc method. To run a
 
 ```{r, psyci, message = FALSE, warning = FALSE}
 psyci(
-  model = mod, contrast_tables = all_fx, method = "ph", 
+  model = mod, 
+  contrast_tables = all_fx, 
+  method = "ph", 
   alpha = alphas
 ) %>%
   unclass() %>%
@@ -223,7 +226,7 @@ psyci(
     within = Session_custom
     ) %>%
   relocate(main_effect, between, within) %>%
-  ### note to self - p vals from emmeans rather than PsyR
+  
   knitr::kable(digits = 3)
 ```
 

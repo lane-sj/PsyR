@@ -143,6 +143,8 @@ Such analysis establishes that significant effects exist in our chosen contrasts
 
 - Alpha is set at 0.05 (both here and by default), indicating the desired type I error rate.
 
+Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
+
 ```{r, psyci}
 contrasts_w_cis <- psyci(
   model = mod,

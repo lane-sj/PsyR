@@ -67,7 +67,7 @@ kevin_within <- kevin_within %>%
 
 Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (in addition to other methods) can be used to inform which contrasts should be analysed.
 
-```{r boxplotit, fig.width = 7, fig.height = 4}
+```{r boxplotit, fig.width = 7, fig.height = 4, dev = 'svg'}
 kevin_within %>%
   ggplot(aes(x = Session, y = Score, fill = Session)) +
   geom_boxplot() +
@@ -137,9 +137,9 @@ The above analysis outputs two p-values, with most of them indicating a failure 
 
 - The method is set as "ph", creating confidence intervals (estimate ± SE · cc) using a post-hoc method [@bird2004].
 
-- PsyR infers that the original `emmGrid` contains a within-subjects family and identifies `Session` as its participating factor.
-
 - Alpha is set at 0.05 (both here and by default), indicating the desired type I error rate.
+
+Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
 ```{r, scis}
 psyci(
