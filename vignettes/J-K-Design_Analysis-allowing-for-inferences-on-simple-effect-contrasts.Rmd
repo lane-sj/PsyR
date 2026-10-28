@@ -7,9 +7,9 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-A vignette to demonstrate how to conduct either a planned or post-hoc analysis of simple effects contrasts in a J x K design. Simple effects contrasts to analyse cell mean differences at one level of a factor by the level (or levels) of the other factor. This is relevant when trying to understand what may be driving an interaction effect, as an interaction effect contrast may be partitioned into two simple effects contrasts.
+A vignette to demonstrate how to conduct either a planned or post-hoc analysis of simple effects contrasts in a J x K design. Simple effects contrasts allow a researcher to analyse cell mean differences at one level of a factor by the level (or levels) of the other factor. This is relevant when trying to understand what may be driving an interaction effect, as an interaction effect contrast may be partitioned into two simple effects contrasts.
 
-In partitioning analysis out at the individual level of a factor, a simple effects analysis produces non-orthogonal families which are incompatible with how an ANOVA F-STP (Simultaneous Test Procedure) controls the FWER. Instead, and as will be demonstrated in this vignette, a simple effects analysis may define two families - the A and B Simple Effects Families - which allows one to examine either (but not both) A or B simple effects. Alternatively, and at the cost of power as compared to defining two families, one may define a single non-standard all-factorial contrasts family, allowing for investigation of simple effects, main effects and interaction effects across all families. As such, the FWER is indirectly controlled by directly controlling the Per-Family Error Rate (PFER) at $m$\$m\$ · ⍺, where $m$ is equal to the number of non-standard families defined.
+In partitioning analysis out at the individual level of a factor, a simple effects analysis produces non-orthogonal families which are incompatible with how an ANOVA F-STP (Simultaneous Test Procedure) controls the FWER. Instead, and as will be demonstrated in this vignette, a simple effects analysis may define two families - the A and B Simple Effects Families - which allows one to examine either (but not both) A or B simple effects. Alternatively, and at the cost of power, one may define a single non-standard all-factorial contrasts family, allowing for investigation of simple effects, main effects and interaction effects across all families. As such, the FWER is indirectly controlled by directly controlling the Per-Family Error Rate (PFER) at $m$ · ⍺, where $m$ is equal to the number of non-standard families defined.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -17,7 +17,6 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-
 
 ## The Packages
 
@@ -32,7 +31,7 @@ library(tidyverse)
 
 ## The Data
 
-The `experience` dataframe contains the results of a between-subjects experiment examining the interaction between years of experience held by a therapist (10, 3, or less than 1) and type of therapy (Behavioural, Cognitive, Psychotherapy and Group Therapy). A higher score on the dependent variable (outcome of therapy) is indicative of improved mental health.
+The `experience` dataframe contains the results of a between-subjects experiment examining the interaction between years of experience held by a therapist (10, 3, or less than 1) and type of therapy (Behavioural, Cognitive, Psychotherapy and Group Therapy). Behavioural and Cognitive therapies may be described as Directive therapies, whereas Psychotherapy and Group therapy may be described as Talking therapies. A higher score on the dependent variable (outcome of therapy) is indicative of improved mental health.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -47,9 +46,9 @@ To learn more about the `experience` dataframe call the help function using `?df
 ?experience
 ```
 
-Also, let's tidy up the data, labeling the levels of our independent variables for greater clarity.
+Also, let's tidy up the data, labelling the levels of our independent variables for greater clarity.
 
-```{r sortfatigue}
+```{r sortdata}
 experience <- experience %>%
   mutate(
     Experience = factor(
@@ -82,14 +81,16 @@ experience %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and later our Simple Effects Contrast Intervals. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining mod in the following way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the "SubjID" column in the ID argument, "Outcome" as our dependent variable, `experience` as our dataframe, and "Experience" and "Therapy" as our between-subjects factors. Finally, create the `emms` object by calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to both "Experience" and "Therapy". Running this code will give us the estimated marginal means for each level of the between-subjects independent variables.
+Here we will create the building blocks for first an ANOVA output, and later our Simple Effects Contrast Intervals. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining mod in the following way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the "SubjID" column in the ID argument, "Outcome" as our dependent variable, `experience` as our dataframe, and "Experience" and "Therapy" as our between-subjects factors. Finally, create the `emms` object by calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to both "Experience" and "Therapy". Running this code will give us the cell means for each level of the between-subjects independent variables.
 
 ```{r, aov}
 # perform the statistical model
-mod <- aov_ez(id="SubjID", 
-              dv="Outcome", 
-              data=experience, 
-              between = c("Experience", "Therapy"))
+mod <- aov_ez(
+  id = "SubjID", 
+  dv = "Outcome", 
+  data = experience, 
+  between = c("Experience", "Therapy")
+)
 
 emms <- emmeans(mod, c("Experience", "Therapy"))
 knitr::kable(emms, digits = 3)
@@ -97,31 +98,30 @@ knitr::kable(emms, digits = 3)
 
 Now let's define and obtain our Factor A (Experience of Therapist) and Factor B (Type of Therapy) contrasts. To do so, create the `experience_contrasts` and `therapy_contrasts` objects, calling `list()` to define our contrasts which compare the following:
 
-**Experience (!NOTE TO SELF!)**
+**Experience**
 
-- "10yrs - \<1yr" ➞ The difference between a therapist with 10 years of experience and a therapist with less than 1 year of experience, averaged across types of therapy.
+- "10, 3yrs - \<1yr" ➞ The difference between the average of therapists with 10 and 3 years of experience and therapists with less than 1 year of experience, averaged across types of therapy.
 
 - "10yrs - 3yrs" ➞ The difference between a therapist with 10 years of experience and a therapist with 3 years of experience, averaged across types of therapy.
 
 **Therapy**
 
-- "Group\~Psych - Cog\~Beh" ➞ The difference between the average of outcomes of Group and Psychotherapy versus the average of Cognitive and Behavioural therapy, averaged across levels of therapist experience.
+- "Directive - Talking" ➞ The difference between the average of outcomes of Directive therapies (Behavioural and Cognitive) versus the average of Talking therapies (Psychotherapy and Group), averaged across levels of therapist experience.
 
-- "Group - Psych" ➞ The difference between the average of Group Therapy versus Psychotherapy, averaged across levels of therapist experience.
+- "Beh - Cog" ➞ The difference between the average of Behavioural Therapy versus Cognitive Therapy, averaged across levels of therapist experience.
 
-- "Cog - Beh" ➞ The difference between the average of Cognitive Therapy versus Behavioural Therapy, averaged across levels of therapist experience.
-
+- "Psych - Group" ➞ The difference between the average of Psychotherapy versus Group Therapy averaged across levels of therapist experience.
 
 ```{r btwn_contrasts}
 experience_contrasts = list(
-  "lots_vs_little" = c(0, 1, -1),
-  "lots_vs_some" = c(1, -1, 0)
+  "10, 3yrs - <1yr" = c(0.5, 0.5, -1),
+  "10yrs - 3yrs" = c(1, -1, 0)
 )
 
 therapy_contrasts = list(
-  "evidence_vs_woowoo" = c(0.5, 0.5, -0.5, -0.5),
-  "behav_vs_cog" = c(1, -1, 0, 0),
-  "woo1_vs_woo2" = c(0, 0, 1, -1)
+  "Directive - Talking" = c(0.5, 0.5, -0.5, -0.5),
+  "Beh - Cog" = c(1, -1, 0, 0),
+  "Psych - Group" = c(0, 0, 1, -1)
 )  
 ```
 
@@ -129,7 +129,7 @@ therapy_contrasts = list(
 
 In this analysis, we will define the A, A(b) and AB families. This will allow us to understand the impact of experience (Factor A) at the cell levels of each type of therapy (Factor B)
 
-To start, let's calculate the main effects for Factor A. To do so, create `emms_exp` by calling `emmeans()`, placing `mod` in the "Object" argument and the "Experience" column in the "Specs" argument. This code will produce the estimated marginal means at each level of Factor A. Next, create`exp_fx` by calling `contrast()`. Place our newly made `emms_exp` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. Thus, `exp_fx` will contain the results of a main effects analysis of Factor A (Experience).
+To start, let's calculate the main effects for Factor A. To do so, create `emms_exp` by calling `emmeans()`, placing `mod` in the "Object" argument and the "Experience" column in the "Specs" argument. This code will produce the estimated marginal means at each level of Factor A. Next, create `exp_fx` by calling `contrast()`. Place our newly made `emms_exp` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. Thus, `exp_fx` will contain the results of a main effects analysis of Factor A (Experience).
 
 ```{r, factor_a_fx}
 emms_exp <- emmeans(mod, c("Experience"))
@@ -137,10 +137,9 @@ exp_fx <- contrast(emms_exp, experience_contrasts, adjust = "bonferroni")
 knitr::kable(exp_fx, digits = 3)
 ```
 
-Now let's get the A(b) effects, i.e. contrasts of each main effect at the four levels of Factor B (Therapy). To do so, create `Exp_g_therapy` and call `emmeans()`, which will take in a model which attempts to predict our previously made `mod` (which, as a reminder, is an ANOVA table containing simultaneous tests of the main effects of Experience, Therapy, and their interaction) by using scores on Experience holding constant Therapy type. This yields the estimated marginal means of each cell, that is each level of Experience at each level of Therapy.
+Now let's get the A(b) effects, i.e. contrasts of each main effect at the four levels of Factor B (Therapy). To do so, create `Exp_g_therapy` and call `emmeans()`, which will take in a model which attempts to predict our previously made `mod` (which, as a reminder, is an ANOVA table containing simultaneous tests of the main effects of Experience, Therapy, and their interaction) by using scores on Experience holding constant Therapy type. This yields the cell means of each level of Experience at each level of Therapy.
 
-To obtain our simple effects of our Factor A contrasts at each level of Factor B, create `Ab_fx` and call `contrast()`. Place `Exp_g_therapy` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. This will save the results of significance tests of our Factor A contrasts (10yrs - \<1yr, and 10yrs - 3yrs) at each level of Therapy.
-
+To obtain our simple effects of our Factor A contrasts at each level of Factor B, create `Ab_fx` and call `contrast()`. Place `Exp_g_therapy` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. This will save the results of significance tests of our Factor A contrasts (10, 3yrs - \<1yr, and 10yrs - 3yrs) at each level of Therapy.
 
 ```{r, A_b}
 Exp_g_therapy <- emmeans(mod, ~ Experience | Therapy)
@@ -153,7 +152,7 @@ Ab_fx <- contrast(
 knitr::kable(Ab_fx, digits = 3)
 ```
 
-Finally, let's obtain our AB interaction effects. Create `interaction_fx` by calling `contrast()`, placing `emms` in the "Object" argument, a list containing our previously established Factor A and Factor B contrasts in the "Interaction" argument, and tell the function to make a Bonferroni adjustment. Thus, the results of our tests of interaction effects will be saved in the `interaction_fx` object.
+Finally, let's obtain our AB interaction effects. Create `interaction_fx` by calling `contrast()`, placing `emms` in the "Object" argument, and a list containing our previously established Factor A and Factor B contrasts in the "Interaction" argument. Finally, tell the function to make a Bonferroni adjustment.
 
 ```{r, AB}
 interaction_fx <- contrast(
@@ -170,9 +169,9 @@ We will now demonstrate how to generate Confidence Intervals for first an a prio
 
 ### Planned Analysis with a Bonferonni adjustment
 
-The following section will detail how to conduct an a priori analysis, first of Main and Interaction Effects Contrasts, and second of Simple Effects Contrasts. In doing so, we aim to demonstrate how a Simple Effects analysis may provide greater clarity to interaction contrasts, as well as how this analysis must be adjusted as compared to an F-STP approach to Main and Interaction Effects.
+The following section will detail how to conduct an a priori analysis, first of Main and Interaction Effects Contrasts, and second of Simple Effects Contrasts. In doing so, we aim to demonstrate how a Simple Effects analysis can be useful in clarifying what is driving interaction effects, as well as how this analysis must be adjusted as compared to an F-STP approach to Main and Interaction Effects.
 
-To run our post-hoc analysis, let's do the following. First, create the object `all_fx` by creating a vector containing lists of the results of significance tests on our Factor A main effects contrasts, A(b) simple effects contrasts, and AB interaction contrasts. Next, create `alphas` which will output a list of length 3 (so as to match the length our `all_fx` object which contains a list of 3 contrast tables), where $⍺ = 1 - (1 - ⍺)^m$ and $m = 2$ (as there are two standard factorial families contained within the non-standard simple effects family we are analysing). Thus, ⍺ is set at .025 per family. Next, we must calculate ν~1~ and store it within the `nu1` object. Here, $ν~1~ = K(J-1)$, so we will run code which captures the number of unique levels of K (Therapy; K = 4) and of J - 1 (Experience; J = 3 ∴ J - 1 = 2). Thus, ν~1~ = 8.
+To run our post-hoc analysis, let's do the following. First, create the object `all_fx` by creating a vector containing lists of the results of significance tests on our Factor A main effects contrasts, A(b) simple effects contrasts, and AB interaction contrasts. Next, create `alphas` which will output a list of length 3 (so as to match the length our `all_fx` object which contains a list of 3 contrast tables), where $⍺ = 1 - (1 - ⍺)^m$ and $m = 2$ (as there are two standard factorial families contained within the non-standard simple effects family we are analysing). Thus, ⍺ is set at .025 per family. Next, we must calculate ν~1~ and store it within the `nu1` object. Here, $ν_1 = K(J-1)$, so we will run code which captures the number of unique levels of K (Therapy; K = 4) and of J - 1 (Experience; J = 3 ∴ J - 1 = 2). Thus, ν~1~ = 8.
 
 Next, we will call `psyci()` and input the following.
 
@@ -180,15 +179,17 @@ Next, we will call `psyci()` and input the following.
 
 - The contrast_tables argument is set as the previously made `all_fx` list.
 
-- The method is set as "bf" to indicate a Scheffé adjustment should be enacted.
+- The method is set as "bf" to indicate a Bonferonni adjustment should be enacted.
 
-- Alpha is set at `alphas`, indicating the desired type I error rate should be set per family at .025 (as we previously established).
+- Alpha is set at `alphas`, indicating the desired type I error rate should be set per family at .025 (has been previously established).
 
 - Finally, set independent as false. Independent takes in either TRUE or FALSE. By default it is set at TRUE, indicating that the correction set in "method" should be applied to each family individually. As we are running a simple effects analysis where we have defined a Factor A family, we need independent to be FALSE to appropriately control the type I error rate.
 
 ```{r, get_cis_bf}
 all_fx <- c(exp_fx, Ab_fx, interaction_fx)
 alphas <- rep(list(2 * .05), times = 3)
+nu1 <- length(unique(levels(experience$Therapy))) * 
+  (length(unique(levels(experience$Experience))) - 1)
 
 psyci(
   model = mod, 
@@ -201,12 +202,10 @@ psyci(
 
 ### Post-Hoc Analysis with a Scheffé adjustment
 
-We will now demonstrate how to conduct a post-hoc analysis including A(b) contrasts. Engaging in this method allows one to address contrasts of interest which may emerge post data collection, however this comes at the cost of lowered statistical power as compared to an A Priori approach.
+We will now demonstrate how to conduct a post-hoc analysis including A(b) contrasts. Engaging in this method allows one to address contrasts of interest which may emerge after an experiment has taken place, however this comes at the cost of lowered statistical power as compared to an a priori approach.
 
 ```{r, get_cis_ph}
 alphas <- rep(list(1 - (1 - 0.05)^2), times = 3)
-nu1 <- length(unique(levels(experience$Therapy))) * 
-       (length(unique(levels(experience$Experience))) - 1)
 
 psyci(
   model = mod, 
@@ -220,7 +219,7 @@ psyci(
 
 #### Main And Interaction Effects
 
-We will now demonstrate a standard analysis with independent families of the Main and Interaction Effects. First, we must calculate the main effects for Factor B - Therapy. To do so, create  `emms_thrpy` and call `emmeans()`, placing `mod` in the "model" argument and the "Therapy" column in the "Specs" argument. Next, create`thrpy_fx` by calling `contrast()`. Place our newly made `emms_thrpy` in the "Object" argument and `therapy_contrasts` in the "Method" argument. Thus, `thrpy_fx` will contain the results of a main effects analysis of Factor B (Therapy). Finally, create `stndrd_fx` which will contain a list of our main effects for factor A and B as well as their interactions. 
+We will now demonstrate a standard analysis with independent families of the Main and Interaction Effects. First, we must calculate the main effects for Factor B - Therapy. To do so, create `emms_thrpy` and call `emmeans()`, placing `mod` in the "model" argument and the "Therapy" column in the "Specs" argument. Next, create`thrpy_fx` by calling `contrast()`. Place our newly made `emms_thrpy` in the "Object" argument and `therapy_contrasts` in the "Method" argument. Thus, `thrpy_fx` will contain the results of a main effects analysis of Factor B (Therapy). Finally, create `stndrd_fx` which will contain a list of our main effects for factor A and B as well as their interactions.
 
 ```{r, factor_b_standard_analysis}
 emms_exp <- emmeans(mod, c("Therapy"))
@@ -261,21 +260,21 @@ psyci(
 
 ## The Interpretation
 
-Simple Effects Contrasts are of most use in helping understand what is driving an interaction effect. To demonstrate this, let's examine interaction between **10yrs - <1yr × Group~Psych - Cog~Beh**, as well as its constituent simple effects contrasts.
+Simple Effects Contrasts are of most use in helping understand what is driving an interaction effect. To demonstrate this, let's examine interaction between **10yrs - \<1yr × Group\~Psych - Cog\~Beh**, as well as its constituent simple effects contrasts.
 
-This interaction looks at how the experience of a therapist (10 years versus less than 1 year) differentially impacts the outcomes of Therapy (the average of Group and Psychotherapy versus the average of Cognitive and Behavioural). As a first port of call, it is helpful to return to our visualisation of the data, which intuitively shows that experience of a therapist seems to matter far more for Group and Psychotherapy than it does for Cognitive and Behavioural. By looking at the output from our main and interaction effects analysis, we can see that this effect is statistically significant (p < .001), where the difference between years of experience leads to an increase on the DV (outcome of therapy) that is felt more by the average of Group~Psych than the average of Cog~Beh, where the difference between the two Factor B groups ranges from 7.196 to 20.804 points. This interpretation, while correct, is not especially useful. Specifically, we cannot quantify with inferential statistics whether this effect is being driven by either group of therapy (Group~Psych versus Cog~Beh)
+This interaction looks at how the experience of a therapist (10 years versus less than 1 year) differentially impacts the outcomes of Therapy (the average of Group and Psychotherapy versus the average of Cognitive and Behavioural). As a first port of call, it is helpful to return to our visualisation of the data, which intuitively shows that experience of a therapist seems to matter far more for Group and Psychotherapy than it does for Cognitive and Behavioural. By looking at the output from our main and interaction effects analysis, we can see that this effect is statistically significant (p \< .001), where the difference between years of experience leads to an increase on the DV (outcome of therapy) that is felt more by the average of Group\~Psych than the average of Cog\~Beh, where the difference between the two Factor B groups ranges from 7.196 to 20.804 points. This interpretation, while correct, is not especially useful. Specifically, we cannot quantify with inferential statistics whether this effect is being driven by either group of therapy (Group\~Psych versus Cog\~Beh)
 
-The current interaction may be partitioned into its two constituent simple effects contrasts: **10 yrs - <1yr × Group~Psych** and **10 yrs - <1yr × Cog~Beh**. From these, we learn the following:
+The current interaction may be partitioned into its two constituent simple effects contrasts: **10 yrs - \<1yr × Group\~Psych** and **10 yrs - \<1yr × Cog\~Beh**. From these, we learn the following:
 
-- **10 yrs - <1yr × Group~Psych:** There is a statistically significant effect (p <.001) where therapists with 10 years of experience outperform those with less than 1yr of experience when administering either Group or Psychotherapy, with this outperformance ranging from between 6.94 and 21.06 more points of increased wellbeing for patients.
+- **10 yrs - \<1yr × Group\~Psych:** There is a statistically significant effect (p \<.001) where therapists with 10 years of experience outperform those with less than 1yr of experience when administering either Group or Psychotherapy, with this outperformance ranging from between 6.94 and 21.06 more points of increased wellbeing for patients.
 
-- **10 yrs - <1yr × Cog~Beh:** There is insufficient evidence to detect a statistically significant effect (p = .789); Therapists with 10 years of experience as compared to those with < 1 year of experience, when administering Cognitive or Behavioural therapies, may outperform therapists with <1 year of experience by patients scoring 9.06 more points of wellbeing, or may underperform as compared to therapists with < 1 year of experience by patients scoring -5.06 points.
+- **10 yrs - \<1yr × Cog\~Beh:** There is insufficient evidence to detect a statistically significant effect (p = .789); Therapists with 10 years of experience as compared to those with \< 1 year of experience, when administering Cognitive or Behavioural therapies, may outperform therapists with \<1 year of experience by patients scoring 9.06 more points of wellbeing, or may underperform as compared to therapists with \< 1 year of experience by patients scoring -5.06 points.
 
 ### The Benefits of CIs
 
-By examining the CIs of each simple effects contrast, we can say the following: the A1B1 contrast **10yrs - <1yr × Group~Psych - Cog~Beh**is significant because the A1 effect (Years of Experience) is differentially felt at each level of B1, where years of experience is only important when administering Group and/or Psychotherapy. However, we also see that the CIs for A1(b1) (6.94, 21.06; 10 yrs - <1yr × Group~Psych) overlap with the CIs for A1(b2) (-5.06, 9.06), where the overlap occur between the lower bound of A1(b1) and the upper bound of A1(b2). This reduces the strength of our inference: having an experienced rather than novice therapist may improve outcomes on the average of Group and Psychotherapy versus on the average of Cognitive and Behavioural Therapy.
+By examining the CIs of each simple effects contrast, we can say the following: the A1B1 contrast **10yrs - \<1yr × Group\~Psych - Cog\~Beh**is significant because the A1 effect (Years of Experience) is differentially felt at each level of B1, where years of experience is only important when administering Group and/or Psychotherapy. However, we also see that the CIs for A1(b1) (6.94, 21.06; 10 yrs - \<1yr × Group\~Psych) overlap with the CIs for A1(b2) (-5.06, 9.06), where the overlap occur between the lower bound of A1(b1) and the upper bound of A1(b2). This reduces the strength of our inference: having an experienced rather than novice therapist may improve outcomes on the average of Group and Psychotherapy versus on the average of Cognitive and Behavioural Therapy.
 
-Finally, CIs allow a researcher to quantify the importance of an effect. Suppose that following new government guidelines, the researcher was only interested in an improvement in wellbeing of **at least 7 points**. If this were the case, while we could make the claim that the A1(b1) contrast of 10 yrs - <1yr × Group~Psych is statistically significant, it may or may not be of importance, as 6.94 < 7.
+Finally, CIs allow a researcher to quantify the importance of an effect. Suppose that following new government guidelines, the researcher was only interested in an improvement in wellbeing of **at least 7 points**. If this were the case, while we could make the claim that the A1(b1) contrast of 10 yrs - \<1yr × Group\~Psych is statistically significant, it may or may not be of importance, as 6.94 \< 7.
 
 ### Limitations of a Simple Effects Analysis
 
