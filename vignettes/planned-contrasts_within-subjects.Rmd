@@ -30,7 +30,7 @@ library(tidyverse)
 
 ## The Data
 
-The `priming` dataframe contains the results of a lexical decision task used to investigate automatic activation of stereotypes through priming. N = 15 participants were subliminally primed with a social category label (e.g., "unemployed" or "elderly") before responding to target words. The target words are either stereotypical attributes, atypical attributes, or neutral words, such that there are 3 levels of the independent variable (p = 3). The dependent variable is reaction time (in tenths of a second), where a faster reaction time indicates a greater priming effect.
+The `priming` dataframe contains the results of a lexical decision task used to investigate automatic activation of stereotypes through priming. *N* = 15 participants were subliminally primed with a social category label (e.g., "unemployed" or "elderly") before responding to target words. The target words are either stereotypical attributes, atypical attributes, or neutral words, such that there are 3 levels of the independent variable (*p* = 3). The dependent variable is reaction time (in tenths of a second), where a faster reaction time indicates a greater priming effect.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -86,9 +86,9 @@ knitr::kable(emms, digits = 3)
 
 Time to define our contrasts!
 
-To do so, it is important to look at the stated aims of the research, and the hypothesised pattern of sample means in the data. In this example, the following contrasts are chosen for analysis:
+To do so, it is important to look at the stated aims of the research and the hypothesised pattern of sample means in the data. In this example, the following contrasts are chosen for analysis:
 
-- "Stereo - Others" ➞ The difference between the average of reaction times after either Atypical or Neutral primes versus the reaction times after Stereotypical primes.
+- "Stereo - Others" ➞ The difference between the average of reaction times after either Atypical or Neutral primes versus after Stereotypical primes.
 
 - "Atyp - Neutral" ➞ The difference between reaction times after an Atypical versus a Neutral prime.
 
@@ -129,7 +129,7 @@ psyci(
 
 One interpretation of our analysis may be as follows. Being primed with a stereotypical word, as opposed to either an atypical or neutral word, results in a significantly faster reaction time (-2.093, -4.907). Further, there is insufficient evidence to suggest a difference exists between priming using an atypical versus a neutral word (-1.323, 3.323).
 
-SCIs are also useful if thresholds of importance are introduced. Imagine that a researcher was only interested in a difference of mean reaction times of **at least three tenths of a second**. This stipulation changes our analysis. For example, while being primed with a stereotypical word (as opposed to either an atypical or neutral word) results in significantly faster reaction times, this may or may not be of importance (as the lower bound 2.093 \< 3). Further, there is insufficient evidence to suggest a difference exists between priming with an atypical versus a neutral word. Examination of the SCI (-1.323, 3.323) reveals that while reaction time differences between an atypical prime may or may not be of importance as compared to reaction time to a neutral prime (3.323 \> 3), a reaction time to a neutral prime is not of importance as compared to an atypical prime (as \|-1.323\| \< 3).
+SCIs are also useful if thresholds of importance are introduced. Imagine that a researcher was only interested in a difference of mean reaction times of **at least three tenths of a second**. This stipulation changes our analysis. For example, being primed with a stereotypical word (as opposed to either an atypical or neutral word) results in significantly faster reaction times. However, this may or may not be of importance (as the lower bound 2.093 \< 3). Further, there is insufficient evidence to suggest a difference exists between priming with an atypical versus a neutral word. Examination of the SCI (-1.323, 3.323) reveals that while reaction time differences between an atypical prime may or may not be of importance as compared to reaction time to a neutral prime (3.323 \> 3), a reaction time to a neutral prime is not of importance as compared to an atypical prime (as \|-1.323\| \< 3).
 
 ------------------------------------------------------------------------
 
