@@ -5,9 +5,10 @@ vignette: >
   %\VignetteIndexEntry{planned-contrasts_within-subjects}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+bibliography: references.bib
 ---
 
-A vignette to demonstrate how to conduct a planned contrasts analysis of single factor within-subjects designs using a multivariate model. Specifically, this vignette highlights how one may use PsyR to create Simultaneous Confidence Intervals (SCIs) which allow a researcher to understand the magnitude of an effect. A multivariate model is appropriate and necessary for a within-subjects design; within-subjects data necessarily violates assumptions of sphericity, and a multivariate model addresses this through producing separate error terms for each contrast. 
+A vignette to demonstrate how to conduct a planned contrasts analysis of single factor within-subjects designs using a multivariate model [@bird2002]. Specifically, this vignette highlights how one may use PsyR to create Simultaneous Confidence Intervals (SCIs) which allow a researcher to understand the magnitude of an effect. A multivariate model is appropriate and necessary for a within-subjects design; within-subjects data necessarily violates assumptions of sphericity, and a multivariate model addresses this through producing separate error terms for each contrast.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -47,7 +48,6 @@ To learn more about the `priming` dataframe call the help function using `?df` t
 Also, let's tidy up the data, labelling the levels of our independent variables for greater clarity.
 
 ```{r sortexp}
-
 priming <- priming %>%
   mutate(
     Prime = factor(Prime),
@@ -129,7 +129,7 @@ psyci(
 
 One interpretation of our analysis may be as follows. Being primed with a stereotypical word, as opposed to either an atypical or neutral word, results in a significantly faster reaction time (-2.093, -4.907). Further, there is insufficient evidence to suggest a difference exists between priming using an atypical versus a neutral word (-1.323, 3.323).
 
-SCIs are also useful if thresholds of importance are introduced. Imagine that a researcher was only interested in a difference of mean reaction times of **at least three tenths of a second**. This stipulation changes our analysis. For example, while being  primed with a stereotypical word (as opposed to either an atypical or neutral word) results in significantly faster reaction times, this may or may not be of importance (as the lower bound 2.093 < 3). Further, there is insufficient evidence to suggest a difference exists between priming with an atypical versus a neutral word. Examination of the SCI (-1.323, 3.323) reveals that while reaction time differences between an atypical prime may or may not be of importance as compared to reaction time to a neutral prime (3.323 > 3), a reaction time to a neutral prime is not of importance as compared to an atypical prime (as |-1.323| < 3).
+SCIs are also useful if thresholds of importance are introduced. Imagine that a researcher was only interested in a difference of mean reaction times of **at least three tenths of a second**. This stipulation changes our analysis. For example, while being primed with a stereotypical word (as opposed to either an atypical or neutral word) results in significantly faster reaction times, this may or may not be of importance (as the lower bound 2.093 \< 3). Further, there is insufficient evidence to suggest a difference exists between priming with an atypical versus a neutral word. Examination of the SCI (-1.323, 3.323) reveals that while reaction time differences between an atypical prime may or may not be of importance as compared to reaction time to a neutral prime (3.323 \> 3), a reaction time to a neutral prime is not of importance as compared to an atypical prime (as \|-1.323\| \< 3).
 
 ------------------------------------------------------------------------
 
