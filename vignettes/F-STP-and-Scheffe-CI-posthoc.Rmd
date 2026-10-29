@@ -139,8 +139,6 @@ Such analysis establishes that significant effects exist in our chosen contrasts
 
 - The method is set as "ph", creating confidence intervals (estimate ± SE · cc) using a post-hoc method [@bird2002a].
 
-- PsyR infers that the original `emmGrid` contains a between-subjects family and identifies `Group` as its participating factor.
-
 - Alpha is set at .05 (both here and by default), indicating the desired type I error rate.
 
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
