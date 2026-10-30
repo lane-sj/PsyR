@@ -7,6 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 bibliography: references.bib
 ---
+A vignette to help understand how to use PsyR to enact a Post-Hoc Analysis of Variance via Confidence Intervals (CIs) in a single factor within-subjects design [@bird2004]. By using CIs, a researcher can gain greater insight into the magnitude of an effect, lending greater nuance and specificity to analysis. This technique adopts a multivariate approach, recognising that each subject produces multiple scores which may be correlated, and assuming a lack of spherecity in the data (as is necessarily expected in within-subjects designs).
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -14,8 +15,6 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-
-A vignette to help understand how to use PsyR to enact a Post-Hoc Analysis of Variance via Confidence Intervals (CIs) in a single factor within-subjects design [@bird2004]. By using CIs, a researcher can gain greater insight into the magnitude of an effect, lending greater nuance and specificity to analysis. This technique adopts a multivariate approach, recognising that each subject produces multiple scores which may be correlated, and assuming a lack of spherecity in the data (as is necessarily expected in within-subjects designs).
 
 ## The Packages
 
