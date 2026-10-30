@@ -237,3 +237,14 @@ Finally, SCIs are especially useful if thresholds of importance are introduced. 
 ### Limitations of a Simple Effects Analysis
 
 Engaging in a simple effects analysis, as compared to an analysis of just main and interaction effects, comes at the cost of reduced power.  This is necessarily the case because we are looking at cell means; in a between x within0subjects analysis, simple effects contrasts will necessarily have a reduced $n$ as compared to a main and interaction effects analysis.
+
+------------------------------------------------------------------------
+
+```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
+knitr::include_graphics("../man/figures/PsyR.png")
+```
+
+------------------------------------------------------------------------
+
+
+
