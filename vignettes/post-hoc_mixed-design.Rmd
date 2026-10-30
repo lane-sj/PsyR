@@ -116,7 +116,7 @@ Now let's define and obtain our between-subjects contrast table. To do so, creat
 
 - "NT - ST" ➞ The difference between the New and Standard treatment conditions.
 
-We can now generate an ANOVA table with tests of significance of each of these between-subjects main effects. This will display the resulting p-values from an unadjusted t-test (from emmeans) and an ANOVA F Simultaneous Test Procedure (from PsyR). To do so, create the `btwn_fx` object. Then, call the `contrast()` function from the emmeans package, setting `emms_win` in the "object" argument and our newly defined `btwn_contrasts` in the "method" argument.
+We can now generate an ANOVA table with tests of significance of each of these between-subjects main effects. This will display the resulting p-values from an unadjusted t-test (from emmeans) and an ANOVA F Simultaneous Test Procedure (from PsyR). To do so, create the `btwn_fx` object. Then, call the `contrast()` function from the emmeans package, setting `emms_btwn` in the "object" argument and our newly defined `btwn_contrasts` in the "method" argument.
 
 ```{r, btwn}
 btwn_contrasts <- list(
