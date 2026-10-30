@@ -1,11 +1,12 @@
 ---
-title: "planned-contrast_A-B-within-subjects-design"
+title: "Planned Contrast A-B Within-Subjects Design"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{planned-contrast_A-B-within-subjects-design}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+A vignette to...
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -14,52 +15,64 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+## The Packages
+
+To use PsyR to calculate confidence intervals over contrast effects, we will utilise a workflow with functions from [afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to implement ANOVA models, and [emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated marginal means and the required contrast estimates. So let's load those packages, and any others that are helpful for our workflow.
+
+```{r setup, message = FALSE, warning = FALSE}
+library(afex)
+library(emmeans)
 library(PsyR)
 library(tidyverse)
-library(emmeans)
-library(afex)
 ```
 
-## Load the data
+## The Data
 
-Lets load the data, define the factors, and plot 
+The `distraction` dataframe contains the results of a (3 x 3) within-subjects factorial design. Here,  *N* = 10 participants were asked to respond within a period of time to the presentation of a target stimulus viewed under three levels of auditory distraction and three levels of visual distraction (*p* = 9). The dependent variable was the number of trials out of 20 for which Ps responded within the required time period to the target stimulus, with a higher score indicating better performance.
+
+Let's load the data, then call the `head()` function to print the first 5 rows.
 
 ```{r loaddata}
-
 data(distraction)
 head(distraction, 5)
 ```
 
+Also, let's tidy up the data, labelling the levels of our independent variables for greater clarity.
 
 ```{r, sortfactors}
-
 distraction <- distraction %>%
-               mutate(Auditory = fct_relevel(Auditory, 'Low', 'Medium', 'High'),
-                      Visual = fct_relevel(Visual, 'None', 'Dissimilar', 'Similar'),
-                      Subject = as_factor(Subject))
-
+  mutate(
+    Auditory = fct_relevel(Auditory, 'Low', 'Medium', 'High'),
+    Visual = fct_relevel(Visual, 'None', 'Dissimilar', 'Similar'),
+    Subject = factor(Subject)
+  )
 ```
 
-
+Next, let's visualise our data. Doing so allows us to more intuitively understand its layout.
 
 ```{r plotdata}
-
-distraction %>% ggplot(aes(x=Auditory, y=Performance, fill=Visual)) +
-  geom_boxplot() + theme_minimal()
-
+distraction %>% 
+  ggplot(aes(x = Auditory, y = Performance, colour = Visual, fill = Visual, shape = Visual)) +
+  stat_summary(fun = mean, geom = "point", size = 3, aes(group = Visual)) +
+  stat_summary(fun = mean, geom = "line", aes(group = Visual)) +
+  scale_shape_manual(values = c(21:24)) +
+  theme_classic(base_size = 14)
 ```
 
+Let's prepare to run some statistical tests!
+
+Here we will create the building blocks for first an ANOVA output, and later our SCIs. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining `mod` in this way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the `Subject` column in the ID argument, `Performance` as our dependent variable, `distraction` as our dataframe, and `Auditory` and `Visual` as our within-subjects factors.
 
 ```{r, aov}
 
 # perform the statistical model
-mod <- aov_ez(id="Subject", 
-              dv="Performance", 
-              data=distraction, 
-              within = c("Auditory", "Visual"))
-#summary(mod)
-
+mod <- aov_ez(
+  id = "Subject",
+  dv = "Performance",
+  data = distraction,
+  within = c("Auditory", "Visual")
+)
+knitr::kable(mod, digits = 3)
 ```
 
 ## Define contrasts
@@ -67,10 +80,7 @@ mod <- aov_ez(id="Subject",
 First for the auditory factor (A)
 
 ```{r, audcontrasts}
-
-
 emms_aud <- emmeans(mod, c("Auditory"))
-emms_aud
 
 aud_contrasts <- list(
   "hvlm" = c(0.5, 0.5, -1),
@@ -78,16 +88,12 @@ aud_contrasts <- list(
 )
 
 aud_fx <- contrast(emms_aud, aud_contrasts)
-aud_fx
-
-
+knitr::kable(aud_fx, digits = 3)
 ```
 
 Now for visual (factor B)
 
 ```{r, viscontrasts}
-
-
 emms_vis <- emmeans(mod, c("Visual"))
 emms_vis
 
@@ -98,19 +104,15 @@ vis_contrasts <- list(
 
 vis_fx <- contrast(emms_vis, vis_contrasts)
 vis_fx
-
-
 ```
 
 And now the interaction contrasts -
 
 ```{r, intcontrasts}
-
-
 emms_int <- emmeans(mod, c("Auditory","Visual"))
 emms_int
 
-int_fx <- contrast(emms_int, interaction=list(aud_contrasts, vis_contrasts))
+int_fx <- contrast(emms_int, interaction = list(aud_contrasts, vis_contrasts))
 int_fx
 
 ```
@@ -120,16 +122,56 @@ int_fx
 Now we're ready to compute SCIs
 
 ```{r scis}
+output <- psyci(
+  model = mod, 
+  contrast_tables = c(aud_fx, vis_fx, int_fx), 
+  method = "bf"
+) 
 
-psyci(model=mod, contrast_tables = c(aud_fx, vis_fx, int_fx), 
-      method = "bf")
+display <- output %>%
+  unclass() %>%
+  bind_rows() %>%
+  mutate(
+    Auditory = coalesce(Auditory_custom, contrast),
+    Visual = coalesce(Visual_custom, contrast)
+  ) %>%
+  select(estimate:psyr_p_value, Auditory, Visual) %>%
+  relocate(Auditory, Visual)
 
+display[1, 2] <- NA
+display[2, 2] <- NA
+display[3, 1] <- NA
+display[4, 1] <- NA
+
+knitr::kable(display, digits = 3)
 ```
 Now run the same thing, but with individual 95% confidence intervals
 
 
 ```{r individual_cis}
+output_ind <- psyci(
+  model = mod, 
+  contrast_tables = c(aud_fx, vis_fx, int_fx),
+  method = "ind"
+)
 
-psyci(model=mod, contrast_tables = c(aud_fx, vis_fx, int_fx), 
-      method = "ind")
+display_ind <- output_ind %>%
+  unclass() %>%
+  bind_rows() %>%
+  mutate(
+    Auditory = coalesce(Auditory_custom, contrast),
+    Visual = coalesce(Visual_custom, contrast)
+  ) %>%
+  select(estimate:psyr_p_value, Auditory, Visual) %>%
+  relocate(Auditory, Visual)
+
+display_ind[1, 2] <- NA
+display_ind[2, 2] <- NA
+display_ind[3, 1] <- NA
+display_ind[4, 1] <- NA
+
+knitr::kable(display_ind, digits = 3)
+```
+
+
 ```
