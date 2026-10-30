@@ -160,10 +160,12 @@ output <- psyci(
 )
 
 output %>%
-    unclass() %>%
-    bind_rows() %>%
-    relocate(contrast, sleep_deprivation, nvh) %>%
-    knitr::kable(digits = 3)
+  unclass() %>%
+  bind_rows() %>%
+  mutate(sfx = coalesce(sleep_deprivation, nvh)) %>%
+  select(contrast:psyr_p_value, sfx) %>% 
+  relocate(contrast, sfx) %>%
+  knitr::kable(digits = 3)
 ```
 
 ## The PsyR contribution: Simultaneous Confidence Intervals
