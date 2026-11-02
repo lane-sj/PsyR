@@ -81,7 +81,7 @@ Here we will create the building blocks for first an ANOVA output, and later our
 
 - The creation of SCIs goes beyond a traditional hypothesis testing approach of determining the significance of a set of contrasts. Where hypothesis testing allows one to determine whether to reject the null hypothesis, SCIs provide additional information regarding the directionality and magnitude of the effects at test (while maintaining a FWER \< ⍺). Such a method is compatible with an initial ANOVA F test.
 
-The following code builds towards an eventual SCI approach. Let's create a new object `emms`, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to "Group" (which, as a reminder, is a column of the factor datatype which indicates what level of the IV each score belongs to). Of note, defining mod in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the estimated marginal means for each level of the independent variable.
+The following code builds towards an eventual SCI approach. Let's create a new object `emms`, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to "Group" (which, as a reminder, is a column of the factor datatype which indicates what level of the IV each score belongs to). Of note, defining mod in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the means for each level of the independent variable.
 
 ```{r, aov}
 # perform the statistical model
@@ -139,16 +139,13 @@ Such analysis establishes that significant effects exist in our chosen contrasts
 
 - The method is set as "ph", creating confidence intervals (estimate ± SE · cc) using a post-hoc method [@bird2002a].
 
-- Alpha is set at .05 (both here and by default), indicating the desired type I error rate.
-
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
 ```{r, psyci}
 contrasts_w_cis <- psyci(
   model = mod,
   contrast_tables = list(btwn_fx),
-  method = "ph",
-  alpha = .05
+  method = "ph"
 )
 knitr::kable(contrasts_w_cis, digits = 3)
 ```
@@ -175,7 +172,7 @@ Such specificity is especially useful if thresholds of importance are introduced
 
 - Alert drivers may make 5.825 fewer or 1.825 more mistakes than their Mildly fatigued counterparts. Thus, while no significant effect has been detected, it can be said with 95% confidence that Alert drivers may make an important amount fewer mistakes than Mildly fatigued drivers (5.825 \> 3), but do not make an important amount more mistakes than Mildly fatigued drivers (1.825 \< 3).
 
-Finally, in lieu of specific values, thresholds of importance may be defined according to standardised units using guidelines such as Cohen's *d* to determine importance [@cohen2013]. To do so, divide raw limits by the within-group standard deviation (the square root of the within-group mean square error).
+Finally, in lieu of specific values, thresholds of importance may be defined according to standardised units using guidelines such as Cohen's *d* to determine importance [@cohen2013]. To do so, divide raw limits by the within-group standard deviation (the square root of the within-group mean square error). While not shown in this vignette, `psyci()` automatically produces a second output scaled in standard units.
 
 ------------------------------------------------------------------------
 

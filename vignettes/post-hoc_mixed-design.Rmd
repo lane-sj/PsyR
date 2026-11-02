@@ -27,7 +27,7 @@ knitr::opts_chunk$set(
 
 To use PsyR to calculate confidence intervals over contrast effects defined post-hoc, we will utilise a workflow with functions from [afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to implement ANOVA models, and [emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated marginal means and the required contrast estimates. So let's load those packages, and any others that are helpful for our workflow.
 
-```{r setup, message = FALSE, warning = FALSE}
+```{r, setup, message = FALSE, warning = FALSE}
 library(afex)
 library(emmeans)
 library(PsyR)
@@ -40,7 +40,7 @@ The `social_anxiety` dataframe contains the results of an experiment with N = 90
 
 Lets load the data, then call the `head()` function to print the first 5 rows.
 
-```{r loaddata, message = FALSE, warning = FALSE}
+```{r, loaddata, message = FALSE, warning = FALSE}
 data(social_anxiety)
 head(social_anxiety, 5)
 ```
@@ -53,7 +53,7 @@ To learn more about the `social_anxiety` dataframe call the help function using 
 
 Also, let's tidy up the data, labeling the levels of our independent variables for greater clarity.
 
-```{r longform}
+```{r, longform}
 social_anxiety <- social_anxiety %>%
   mutate(
     Session = fct_relevel(
@@ -71,7 +71,7 @@ social_anxiety <- social_anxiety %>%
 
 Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (alongside other methods) can be used to inform which contrasts should be analysed. This is especially relevant for post-hoc analyses, where we may notice trends and patterns emerging that could not have been conceptualised a priori.
 
-```{r linegraphit, fig.width = 7, fig.height = 4, message = FALSE, warning = FALSE, dev = 'svg'}
+```{r, linegraphit, fig.width = 7, fig.height = 4, message = FALSE, warning = FALSE, dev = 'svg'}
 social_anxiety %>%
   group_by(Group, Session) %>%
   summarise(
@@ -93,11 +93,9 @@ First, let's specify that we want a multivariate analysis, using the `afex_optio
 
 Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Thus, this workflow differs from the more common omnibus ANOVA with follow up significance tests.
 
-```{r model}
-# set emmeans option to multivariate
+```{r, model, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
 
-# perform the statistical model
 mod <- aov_ez(
   "Subject", 
   "Score", 
@@ -185,22 +183,31 @@ Note that PsyR infers the family and participating factors for every original `e
 all_fx <- list(win_fx, btwn_fx, int_fx)
 alphas = .05 # 3 * alpha / nk
 
-psyci(
+output_bon <- psyci(
   model = mod, 
   contrast_tables = all_fx, 
   method = "bf", 
   alpha = alphas
-) %>%
+) 
+
+display_bon <- output_bon %>%
   unclass() %>%
   bind_rows() %>%
-  rename(
-    main_effect = contrast,
-    between = Group_custom,
-    within = Session_custom
-    ) %>%
-  relocate(main_effect, between, within) %>%
+  mutate(
+    Group = coalesce(contrast, Group_custom),
+    Session = coalesce(contrast, Session_custom)
+  ) %>%
+  select(estimate:psyr_p_value, Group, Session) %>%
+  relocate(Group, Session)
+
+display_bon[1, 1] <- NA
+display_bon[2, 1] <- NA
+display_bon[3, 1] <- NA
+display_bon[4, 2] <- NA
+display_bon[5, 2] <- NA
+ 
   
-  knitr::kable(digits = 3)
+knitr::kable(display_bon, digits = 3)
 ```
 
 The above table contains the results of a planned analysis of our three families using a bonferonni approach. While we will refrain from analysis of this table here, note that by way of the greater statistical power afforded to an a priori analysis, the SCIs will be more precise in this method than in a post-hoc method.
@@ -212,22 +219,31 @@ Further, note that while the above table contains p-values from both emmeans and
 Using near-identical code, we will now demonstrate the post-hoc method. To run a post-hoc analysis, change the method argument to "ph". A post-hoc method affords greater flexibility by controlling the FWER at the nominal ⍺ regardless of the number of contrasts examined. However, this flexibility comes at the cost of power.
 
 ```{r, psyci, message = FALSE, warning = FALSE}
-psyci(
+output_ph <- psyci(
   model = mod, 
   contrast_tables = all_fx, 
   method = "ph", 
   alpha = alphas
-) %>%
+) 
+
+display_ph <- output_ph %>%
   unclass() %>%
   bind_rows() %>%
-  rename(
-    main_effect = contrast,
-    between = Group_custom,
-    within = Session_custom
-    ) %>%
-  relocate(main_effect, between, within) %>%
+  mutate(
+    Group = coalesce(contrast, Group_custom),
+    Session = coalesce(contrast, Session_custom)
+  ) %>%
+  select(estimate:psyr_p_value, Group, Session) %>%
+  relocate(Group, Session)
+
+display_ph[1, 1] <- NA
+display_ph[2, 1] <- NA
+display_ph[3, 1] <- NA
+display_ph[4, 2] <- NA
+display_ph[5, 2] <- NA
+ 
   
-  knitr::kable(digits = 3)
+knitr::kable(display_ph, digits = 3)
 ```
 
 By and large, a post-hoc analysis merits the same conclusions as the above a priori analysis, with the caveat that the loss of power necessary in a post-hoc method has yielded less precise SCIs. However, engaging in this method affords greater flexibility to a researcher, who may define a limitless number of contrasts post-hoc to answer research questions that could not have been conceived a priori. Analysis of these SCIs may look as follows.

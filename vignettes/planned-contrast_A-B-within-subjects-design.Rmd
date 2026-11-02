@@ -5,6 +5,7 @@ vignette: >
   %\VignetteIndexEntry{planned-contrast_A-B-within-subjects-design}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+bibliography: references.bib
 ---
 
 A vignette to demonstrate a planned contrast analysis of a factorial within x within design using a multivariate model [@bird2004]. Specifically, this vignette highlights how one may use PsyR to create Simultaneous Confidence Intervals (SCIs) which allow a researcher to understand the magnitude of an effect. A multivariate model is appropriate and necessary for a design with a within-subjects independent variable; within-subjects data necessarily violates assumptions of sphericity, and a multivariate model addresses this through producing separate error terms for each contrast.

@@ -168,7 +168,7 @@ output %>%
   knitr::kable(digits = 3)
 ```
 
-## The PsyR contribution: Simultaneous Confidence Intervals
+## The Interpretation
 
 A simple effects analysis allows one to isolate and understand an interaction effect. This method is enhanced by creating SCIs which let a researcher understand the magnitude of simple effects. This allows for comparison of effect sizes, giving greater clarity into what is driving an interaction effect. For example, with reference to the current example's interaction effect, the following may be said.
 

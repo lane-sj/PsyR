@@ -199,10 +199,10 @@ In situations in which there are established thresholds of importance, an SCI ap
 
 - There was insufficient evidence of a significant difference between Treatments 1 and 2 at post-treatment as compared to pre-treatment (-1.304, 9.304). However, in comparison to Treatment 1, Treatment 2 resulted in significantly greater and clinically important improvements in happiness scores at follow-up as compared to post-treatment (-12.609, -3.391).
 
-----------------------------------------------------
+------------------------------------------------------------------------
 
 ```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
 knitr::include_graphics("../man/figures/PsyR.png")
 ```
 
-----------------------------------------------------
+------------------------------------------------------------------------

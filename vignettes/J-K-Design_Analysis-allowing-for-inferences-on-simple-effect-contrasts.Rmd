@@ -81,7 +81,7 @@ experience %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and later our Simple Effects Contrasts. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining `mod` in this way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the `SubjID` column in the ID argument, `Outcome` as our dependent variable, `experience` as our dataframe, and `Experience` and `Therapy` as our between-subjects factors. Finally, create the `emms` object by calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to both `Experience` and `Therapy`. Running this code will give us the cell means for each level of the between-subjects independent variables.
+Here we will create the building blocks for first an ANOVA output, and later our Simple Effects Contrasts. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining `mod` in this way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the `SubjID` column in the ID argument, `Outcome` as our dependent variable, `experience` as our dataframe, and `Experience` and `Therapy` as our between-subjects factors. Finally, create the `emms` object by calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to both `Experience` and `Therapy`. Running this code will give us the cell means for each of the twelve possible conditions of the between-subjects independent variables.
 
 ```{r, aov, message = FALSE, warning = FALSE}
 mod <- aov_ez(
@@ -128,7 +128,7 @@ therapy_contrasts = list(
 
 In this analysis, we will define the A [A, A(b)] and interaction (AB) families. This will allow us to understand the impact of experience (Factor A) at the cell levels of each type of therapy (Factor B)
 
-To start, let's calculate the main effects for Factor A. To do so, create `emms_exp` by calling `emmeans()`, placing `mod` in the "Object" argument and the `Experience` column in the "Specs" argument. This code will produce the cell means at each level of Factor A. Next, create `exp_fx` by calling `contrast()`. Place our newly made `emms_exp` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. Thus, `exp_fx` will contain the results of a main effects analysis of Factor A (Experience).
+To start, let's calculate the main effects for Factor A. To do so, create `emms_exp` by calling `emmeans()`, placing `mod` in the "Object" argument and the `Experience` column in the "Specs" argument. This code will produce the marginal means at each level of Factor A. Next, create `exp_fx` by calling `contrast()`. Place our newly made `emms_exp` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. Thus, `exp_fx` will contain the results of a main effects analysis of Factor A (Experience).
 
 ```{r, factor_a_fx, message = FALSE, warning = FALSE}
 emms_exp <- emmeans(mod, c("Experience"))
@@ -136,7 +136,7 @@ exp_fx <- contrast(emms_exp, experience_contrasts, adjust = "bonferroni")
 knitr::kable(exp_fx, digits = 3)
 ```
 
-Now let's get the A(b) effects: Contrasts of each main effect at the four levels of Factor B (Therapy). To do so, create `Exp_g_therapy` and call `emmeans()`, which will take in a model which attempts to predict our previously made `mod` (which, as a reminder, is an ANOVA table containing simultaneous tests of the main effects of Experience, Therapy, and their interaction) by using scores on Experience holding constant Therapy type. This yields the cell means of each level of Experience at each level of Therapy. Next, to obtain simple effects of the Factor A contrasts at each level of Factor B, create `Ab_fx` and call `contrast()`. Place `Exp_g_therapy` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. Thus, the `Ab_fx` object will contain the results of significance tests of our Factor A contrasts (3yrs - \<1yr, and 10yrs - 3yrs) at each level of Therapy.
+Now let's get the A(b) effects, that is, contrasts of each main effect at the four levels of Factor B (Therapy). To do so, create `Exp_g_therapy` and call `emmeans()`, which will take in a model which attempts to predict our previously made `mod` (which, as a reminder, is an ANOVA table containing simultaneous tests of the main effects of Experience, Therapy, and their interaction) by using scores on Experience holding constant Therapy type. This yields the cell means of each level of Experience at each level of Therapy. Next, to obtain simple effects of the Factor A contrasts at each level of Factor B, create `Ab_fx` and call `contrast()`. Place `Exp_g_therapy` in the "Object" argument, `experience_contrasts` in the "Method" argument, and tell the function to make a Bonferroni adjustment. Thus, the `Ab_fx` object will contain the results of significance tests of our Factor A contrasts (3yrs - \<1yr, and 10yrs - 3yrs) at each level of Therapy.
 
 ```{r, A_b, message = FALSE, warning = FALSE}
 Exp_g_therapy <- emmeans(mod, ~ Experience | Therapy)
@@ -240,7 +240,7 @@ knitr::kable(display_ph, digits = 3)
 
 ### Standard Analysis with Independent Families
 
-Finally, we will demonstrate a standard analysis with independent families of the Main and Interaction Effects. We will do so using a Bonferonni procedure. First, we must calculate the main effects for Factor B: Therapy. To do so, create `emms_therapy` and call `emmeans()`, placing `mod` in the "model" argument and the `Therapy` column in the "Specs" argument. Next, create `therapy_fx` by calling `contrast()`. Place our newly made `emms_therapy` in the "Object" argument and `therapy_contrasts` in the "Method" argument. Thus, `therapy_fx` will contain the results of a main effects analysis of Factor B (Therapy). Finally, create `stndrd_fx` which will contain a list of our main effects for factor A and B as well as their interactions.
+Finally, we will demonstrate a standard analysis with independent families of the main and interaction effects. We will do so using a Bonferonni procedure. First, we must calculate the main effects for Factor B: Therapy. To do so, create `emms_therapy` and call `emmeans()`, placing `mod` in the "model" argument and the `Therapy` column in the "Specs" argument. Next, create `therapy_fx` by calling `contrast()`. Place our newly made `emms_therapy` in the "Object" argument and `therapy_contrasts` in the "Method" argument. Thus, `therapy_fx` will contain the results of a main effects analysis of Factor B (Therapy). Finally, create `stndrd_fx` which will contain a list of our main effects for factor A and B as well as their interactions.
 
 ```{r, factor_b_standard_analysis}
 emms_therapy <- emmeans(mod, c("Therapy"))
@@ -256,14 +256,11 @@ Next, call `psyci()`, setting the following:
 
 - The method is set as "bf" to indicate a Bonferroni adjustment should be enacted.
 
-- Alpha is set at .05.
-
 ```{r, get_cis}
 output_ind <- psyci(
   model = mod, 
   contrast_tables = stndrd_fx, 
-  method = "bf", 
-  alpha = 0.05
+  method = "bf"
 ) 
 
 display_ind <- output_ind %>%
@@ -291,23 +288,23 @@ knitr::kable(display_ind, digits = 3)
 
 Simple Effects Contrasts are of most use in helping understand what is driving an interaction effect. To demonstrate this, let's examine the interaction between **3yrs - \<1yr × Directive - Talking**, as well as its constituent simple effects contrasts.
 
-This interaction looks at how the experience of a therapist (3 years versus less than 1 year) differentially impacts the outcomes of Therapy (the average of Directive versus Talking therapies). As a first port of call, it is helpful to return to our visualisation of the data, which intuitively shows that experience of a therapist seems to matter more for Talking therapies (Psychotherapy and Group) than for Directive therapies (Cognitive and Behavioural). By looking at the output from our main and interaction effects analysis, we can see that this effect is statistically significant, where the difference between years of experience leads to an increase on the DV (outcome of therapy) that is felt more by the average of Talking than the average of Directive therapies, where the difference between the two Factor B groups (Talking minus Directive) ranges from 12.196 to 25.804 points. This interpretation, while correct, is not especially useful. Specifically, it would be useful to quantify whether this effect is being differentially driven by either Directive or Talking therapies.
+This interaction looks at how the experience of a therapist (3 years versus less than 1 year) differentially impacts the outcomes of Therapy (the average of Directive versus Talking therapies). As a first port of call, it is helpful to return to our visualisation of the data, which intuitively shows that experience of a therapist seems to matter more for Talking therapies (Psychotherapy and Group) than for Directive therapies (Cognitive and Behavioural). By looking at the output from our main and interaction effects analysis, we can see that this effect is statistically significant, where the difference between years of experience leads to an increase on the DV (outcome of therapy) that is felt more by the average of Talking than the average of Directive therapies, and the difference between the two Factor B groups (Talking minus Directive) ranges from 12.196 to 25.804 points. This interpretation, while correct, is not especially useful. Specifically, it would be useful to quantify whether this effect is being differentially driven by either Directive or Talking therapies.
 
-To understand what is driving the interaction, we may partition it into its two constituent simple effects contrasts: **3 yrs - \<1yr × Talking** and **3 yrs - \<1yr × Directive**. From these, and with reference to an a priori analysis, we learn the following:
+To understand what is driving the interaction, we may partition it into its constituent simple effects contrasts: **3 yrs - \<1yr × Talking** and **3 yrs - \<1yr × Directive**. From these, and with reference to an a priori analysis, we learn the following:
 
 - **3 yrs - \<1yr × Talking:** There is a statistically significant effect where therapists with 3 years of experience outperform those with less than 1yr of experience when administering either Group or Psychotherapy. Respectively, as compared to patients of therapists with less than 1 year of experience, patients of therapists with 3 years of experience have greater wellbeing scores on both Psychotherapy (8.94, 23.06) and on Group therapy (5.94, 20.06)
 
-- **3 yrs - \<1yr × Directive:** There is insufficient evidence of a statistically significant effect. When administering Talking therapies, therapists with 3 years of experience may or may not outperform those with \< 1 year of experience, both in terms of Behavioural (-11.06, 3.06) and Cognitive (-12.06, 2.06)) therapies.
+- **3 yrs - \<1yr × Directive:** There is insufficient evidence of a statistically significant effect. When administering Talking therapies, therapists with 3 years of experience may or may not outperform those with \< 1 year of experience, both in terms of Behavioural (-11.06, 3.06) and Cognitive (-12.06, 2.06) therapies.
 
 ### The Benefits of CIs
 
-By examining the CIs of each simple effects contrast, we can say the following: the A1B1 contrast **3yrs - \<1yr × Talking - Directive** is significant because the A1 effect (Years of Experience) is differentially felt at each level of B1, where 3 years of experience is only important when administering Talking therapies. Further, by examining the overlap (or lack thereof) between the simple effects confidence intervals, one can infer differences at the population level. For example, the CIs of the simple effects of Talking therapies at 3yrs- \< 1yr do not overlap with those of Directive therapies, implying that the population value for 3yrs- \< 1yr is different for Talking and Directive therapies. However, when comparing within Talking or Directive therapies, the simple effects CIs overlap, suggesting that at the population level these therapies lead to the same wellbeing impacts per level of therapist experience (3yrs - \< 1yr).
+By examining the CIs of each simple effects contrast, we can say the following: the A1B1 contrast **3yrs - \<1yr × Talking - Directive** is significant because the A1 effect (Years of Experience) is differentially felt at each level of B1, where 3 years of experience is only important when administering Talking therapies. Further, by examining the overlap (or lack thereof) between the simple effects confidence intervals, one can infer differences at the population level. For example, the CIs of the simple effects of Talking therapies at 3yrs - \< 1yr do not overlap with those of Directive therapies, implying that the population value for 3yrs - \< 1yr is different for Talking and Directive therapies. However, when comparing within Talking or Directive therapies, the simple effects CIs overlap, suggesting that at the population level these therapies lead to the same wellbeing impacts per level of therapist experience (3yrs - \< 1yr).
 
 Finally, CIs allow a researcher to quantify the importance of an effect. Suppose that following new government guidelines, the researcher was only interested in an improvement in wellbeing of **at least 4 points**. If this were the case, while the main effect of Years of Experience is statistically significant, it may or may not be of importance, as the lower bound 2.122 is less than 4 units. On the other hand, the interaction of 3yrs - \<1 and Directive - Talking is both statistically significant and clinically important, as the lower bound -12.196 is more than 4 units.
 
 ### Limitations of a Simple Effects Analysis
 
-Engaging in a simple effects analysis, as compared to an analysis of just main and interaction effects, comes at the cost of reduced power. This can be seen by comparing the outputs from our main and interaction effects analysis versus our simple effects analysis. Specifically. main effects and interaction effects - when analysed via an A Family simple effects model - have yielded less precise CIs. This reduction in power can be attributed to simple effects models necessarily having larger standard errors and critical constants per contrast. This is necessarily the case because we are looking at cell means; in a between subjects analysis simple effects contrasts will necessarily have a reduced $n$ as compared to a main and interaction effects analysis.
+Engaging in a simple effects analysis, as compared to an analysis of just main and interaction effects, comes at the cost of reduced power. This can be seen by comparing the outputs from our main and interaction effects analysis versus our simple effects analysis. Specifically, main effects and interaction effects - when analysed via an A Family simple effects model - have yielded less precise CIs. This reduction in power can be attributed to simple effects models necessarily having larger standard errors and critical constants per contrast. This is necessarily the case because we are looking at cell means, and a between-subjects analysis entails that each group will have a reduced $n$ as compared to a main and interaction effects analysis in which all participants are represented.
 
 ------------------------------------------------------------------------
 
