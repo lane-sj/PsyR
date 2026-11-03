@@ -23,7 +23,7 @@ library(tidyverse)
 
 ## The Data
 
-The `drive_sleepy` dataframe contains the results of a between-subjects experiment examining the impact of sleep deprivation and vehicle noise, vibration and harshness (NVH) on driving performance. Sleep deprivation has J = 2 levels: twelve or zero hours of sleep deprivation. NVH has K = 2 levels: high or low NVH. The dependent variable is driving performance as operationalised by a driving errors score, where a higher score is indicative of poorer performance.
+The `drive_sleepy` dataframe contains the results of a between-subjects experiment examining the impact of sleep deprivation and vehicle noise, vibration and harshness (NVH) on driving performance. Sleep deprivation has J = 2 levels (twelve or zero hours of sleep deprivation), and NVH has K = 2 levels (high or low NVH). The dependent variable is driving performance as operationalised by a driving errors score, where a higher score is indicative of poorer performance.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -59,7 +59,7 @@ drive_sleepy |>
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and later our SCIs. To start, let's run our ANOVA and save it in the `mod` object. Of note, defining mod in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest.
+Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. To start, let's create the object `mod` by calling the `afex::aov_ez()` function. Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. 
 
 ```{r model, message = FALSE, warning = FALSE}
 mod <- aov_ez(
@@ -74,11 +74,11 @@ Time to define our contrasts!
 
 Assembly of contrasts in this design will follow a slightly different workflow to other designs without simple effects. Following the Studentized Maximum Root (SMR) procedure outlined on pages 353 and 354 of @bird2005, we will place our contrasts of interest into a set of lists and then define our SMR parameters based on our family of models [A(b), B(a), or A(b) $\cap$ B(a)].
 
-Let's start by defining our between-subjects contrasts. To do so, create `btwn_cont`, an object which takes in a list of the following contrasts (in mean difference scaling):
+Let's start by defining our between-subjects main effects contrasts. To do so, create `btwn_cont`, an object which takes in a list of the following contrasts:
 
-- "Sleep_Dep" ➞ The difference between twelve and zero hours of sleep deprivation, holding NVH constant.
+- "Sleep_Dep" ➞ The difference between driving performance scores when under twelve versus zero hours of sleep deprivation.
 
-- "NVH" ➞ The difference between high and low levels of NVH (which, as a reminder, is vehicle noise, vibration and harshness), holding sleep deprivation constant.
+- "NVH" ➞ The difference between driving performance scores when under high versus low levels of NVH.
 
 ```{r, between_subjects_contrasts}
 btwn_cont <- list(
@@ -87,7 +87,7 @@ btwn_cont <- list(
 )
 ```
 
-With our between-contrasts list established, let's obtain our estimated marginal means. To do so, create the `emms` object and call `emmeans()` , taking in our previously made `mod` in the "object" argument and a vector containing our independent variables in the "specs" argument. Let's also create the main effects object `mfx`, using the `contrast()` function and placing `emms` in the "object" argument and `btwn_cont` in the "interaction" argument. This `mfx` object will be important for when we apply our SMR correction later down the track.
+With our between-subjects main effects contrasts established, let's obtain our estimated marginal means. To do so, create the `emms` object and call `emmeans::emmeans()` , taking in our previously made `mod` in the "Object" argument and a vector containing our independent variables in the "Specs" argument. Let's also create the main effects object `mfx`, using the `contrast()` function and placing `emms` in the "object" argument and `btwn_cont` in the "interaction" argument. This `mfx` object will be important for when we apply our SMR correction later down the track.
 
 ```{r contrasts}
 emms <- emmeans(mod, c("sleep_deprivation", "nvh"))
@@ -96,7 +96,7 @@ mfx <- contrast(emms, btwn_cont)
 
 We also need our interaction contrast. For the sake of clarity we define it separately in this vignette, but it is also possible to add this contrast to the above `btwn_cont` list. Note that this contrast must be defined in interaction scaling, rather than mean difference scaling,.
 
-- "int" ➞ The interaction between sleep deprivation and NVH.
+- "int" ➞ The interaction between sleep deprivation and NVH (AKA the product of our main effects contrasts after interaction scaling has been applied).
 
 ```{r interaction_contrast}
 int <- contrast(
@@ -105,13 +105,19 @@ int <- contrast(
 )
 ```
 
-Finally, let's produce simple effects contrasts of NVH at each level of sleep deprivation and sleep deprivation at each level of NVH. First, create the `nvh_by_sleep_dep` object. This takes in a model which attempts to predict our previously made `mod` (which, as a reminder, is an ANOVA table containing simultaneous tests of the main effects of sleep deprivation, NVH and their interaction) by using score on NVH holding constant sleep deprivation. Next, create the `simp_fx_contrast` object which will take in a list which compares the two levels of NVH (high versus low) and of sleep deprivation (Twelve versus Zero). Finally, create `nvh_simp_fx`, an object containing two simple effects contrasts examining the effect of NVH in participants with twelve hours of sleep deprivation versus that same effect in participants with zero hours of sleep deprivation.
+Next, let's produce simple effects contrasts of NVH at each level of sleep deprivation and simple effects contrasts of sleep deprivation at each level of NVH. First, create the `nvh_by_sleep_dep` object. This takes in a model which attempts to predict our previously made `mod` (which, as a reminder, is an ANOVA output containing simultaneous tests of the main effects of sleep deprivation, NVH and their interaction) by using score on NVH holding constant sleep deprivation. Next, create the `simp_fx_contrast` object which will take in a list which compares the two levels of NVH (high versus low) and of sleep deprivation (Twelve versus Zero). Finally, create `nvh_simp_fx`, an object containing two simple effects contrasts examining the effect of NVH in participants with twelve hours of sleep deprivation versus that same effect in participants with zero hours of sleep deprivation.
 
 ```{r nvh_at_sleep_dep}
 nvh_by_sleep_dep <- emmeans(mod, ~ nvh | sleep_deprivation)
 simp_fx_contrast  <- list("sfx" = c(1, -1))
 nvh_simp_fx <- contrast(nvh_by_sleep_dep, method = simp_fx_contrast)
-knitr::kable(nvh_simp_fx, digits = 3)
+```
+```{r, kable_nvh, echo = FALSE}
+nvh_display <- as.data.frame(nvh_simp_fx)
+
+nvh_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Following similar steps, let's also produce simple effects contrasts of sleep deprivation at both high and low NVH.
@@ -119,12 +125,18 @@ Following similar steps, let's also produce simple effects contrasts of sleep de
 ```{r sleep_dep_at_nvh}
 sleep_dep_by_nvh <- emmeans(mod, ~ sleep_deprivation | nvh)
 sdep_simp_fx <- contrast(sleep_dep_by_nvh, method = simp_fx_contrast)
-knitr::kable(sdep_simp_fx, digits = 3)
+```
+```{r, kable_sdep, echo = FALSE}
+sdep_display <- as.data.frame(sdep_simp_fx)
+
+sdep_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Finally, let's apply the SMR correction to all our contrasts and produce their corresponding confidence intervals. To do so, we first need to create the `all_fx` and `alphas` objects. `all_fx` will take in a vector containing all contrasts tables, and `alphas` will be set at the nominal ⍺ = .05. Note that ⍺ levels will be be adjusted by the `psyci()` function to ensure the appropriate alpha is used per contrast.
 
-Next, create the object `smr_params` using the `list()` function. Within the function call, set `p` and `q` according to the guidelines on page 359 of @bird2005. Additionally, for the purposes of replication you may opt to set values for `n_sim` and `seed`.
+Next, create the object `smr_params` using the `base::list()` function. Within the function call, set `p` and `q` according to the guidelines on page 359 of @bird2005. Additionally, for the purposes of replication you may opt to set values for `n_sim` and `seed`.
 
 Finally, create the `output` object by calling `psyci()`, setting the following:
 
@@ -158,7 +170,8 @@ output <- psyci(
   smr_params = smr_params,
   alpha = alphas
 )
-
+```
+``` {r, kable_output, echo = FALSE}
 output %>%
   unclass() %>%
   bind_rows() %>%
@@ -179,7 +192,7 @@ SCIs are also useful when thresholds of importance are introduced. Suppose that,
 ------------------------------------------------------------------------
 
 ```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
-knitr::include_graphics("../man/figures/PsyR.png")
+knitr::include_graphics("../man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------

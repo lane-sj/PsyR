@@ -92,7 +92,7 @@ experience_contrasts = list(
   "atyp - neutral" = c(1, -1, 0)
 )
 
-contrast_table <- contrast(emm, experience_contrasts, adjust = "bonferroni")
+contrast_table <- contrast(emms, experience_contrasts, adjust = "bonferroni")
 ```
 
 
