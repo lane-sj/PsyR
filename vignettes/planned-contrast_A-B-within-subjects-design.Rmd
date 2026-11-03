@@ -8,7 +8,7 @@ vignette: >
 bibliography: references.bib
 ---
 
-A vignette to demonstrate a planned contrast analysis of a factorial within x within design using a multivariate model [@bird2004]. Specifically, this vignette highlights how one may use PsyR to create Simultaneous Confidence Intervals (SCIs) which allow a researcher to understand the magnitude of an effect. A multivariate model is appropriate and necessary for a design with a within-subjects independent variable; within-subjects data necessarily violates assumptions of sphericity, and a multivariate model addresses this through producing separate error terms for each contrast.
+A vignette to demonstrate a planned contrast analysis of a factorial within x within design using a multivariate model [@bird2004]. Specifically, this vignette highlights how one may use PsyR to create Simultaneous Confidence Intervals (SCIs) which allow a researcher to understand the magnitude of an effect. A multivariate model is appropriate and necessary for a design with within-subjects data; within-subjects data necessarily violates assumptions of sphericity, and a multivariate model addresses this through producing separate error terms for each contrast.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -30,7 +30,7 @@ library(tidyverse)
 
 ## The Data
 
-The `distraction` dataframe contains the results of a (3 x 3) within-subjects factorial design. Here, *N* = 10 participants were asked to respond within a period of time to the presentation of a target stimulus viewed under three levels of auditory distraction and three levels of visual distraction (*p* = 9). The dependent variable was the number of trials out of 20 for which participants responded within the required time period to the target stimulus, with a higher score indicating better performance.
+The `distraction` dataframe contains the results of a (3 x 3) within-subjects factorial design. Here, *N* = 10 participants were asked to respond within a period of time to the presentation of a target stimulus viewed under three levels of auditory distraction (low, medium, high) and three levels of visual distraction (none, dissimilar, similar) such that *p* = 9. The dependent variable is the number of trials out of 20 for which participants responded within the required time period to the target stimulus, with a higher score indicating better performance.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -45,7 +45,7 @@ To learn more about the `distraction` dataframe, call the help function using `?
 ?distraction
 ```
 
-Also, let's tidy up the data, labelling the levels of our independent variables for greater clarity.
+Also, let's tidy up the data, labelling the levels of our within-subjects factors for greater clarity.
 
 ```{r, sortfactors}
 distraction <- distraction %>%
@@ -56,7 +56,7 @@ distraction <- distraction %>%
   )
 ```
 
-Next, let's visualise our data. Doing so allows us to more intuitively understand its layout.
+Next, let's visualise our data. Doing so allows a more intuitive understanding of its layout.
 
 ```{r plotdata, fig.width = 7, fig.height = 4, dev = 'svg'}
 distraction %>% 
@@ -64,6 +64,7 @@ distraction %>%
   stat_summary(fun = mean, geom = "point", size = 3, aes(group = Visual)) +
   stat_summary(fun = mean, geom = "line", aes(group = Visual)) +
   scale_shape_manual(values = c(21:24)) +
+  ylim(0, 19) +
   theme_classic(base_size = 14)
 ```
 
@@ -71,7 +72,7 @@ distraction %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and later our SCIs. To start, let's create the object `mod` by calling the `aov_ez()` function. Of note, defining `mod` in this way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the `Subject` column in the ID argument, `Performance` as our dependent variable, `distraction` as our dataframe, and `Auditory` and `Visual` as our within-subjects factors.
+Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. To start, let's create the object `mod` by calling the `afex::aov_ez()` function. Of note, defining `mod` in this way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the `Subject` column in the ID argument, `Performance` as our dependent variable, `distraction` as our dataframe, and `Auditory` and `Visual` as our within-subjects factors.
 
 ```{r, aov, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
@@ -88,17 +89,17 @@ Time to define our contrasts!
 
 To do so, it is important to look at the stated aims of the research and the hypothesised pattern of sample means in the data. In this example, the following contrasts are chosen for analysis:
 
-**Auditory Distraction**
+**Auditory Distraction Main Effects Contrasts**
 
-- "LowMed - High" ➞ The difference between the average of the low and medium auditory distraction conditions and the high auditory distraction condition, holding constant visual distraction.
+- "LowMed - High" ➞ The difference between the average number of completed trials when in the low and medium auditory distraction conditions versus when in the high auditory distraction condition.
 
-- "Low - Med" ➞ The difference between the low and high auditory distraction conditions, holding constant visual distraction.
+- "Low - Med" ➞ The difference between the average number of completed trials when in the low auditory distraction condition as compared to the high auditory distraction condition.
 
-**Visual Distraction**
+**Visual Distraction Main Effects Contrasts**
 
-- "None - Some" ➞ The difference between the no visual distraction condition and the average of the dissimilar and similar visual distraction conditions, holding constant auditory distraction.
+- "None - Some" ➞ The difference between the average number of completed trials when in the no visual distraction condition versus when in the average of the dissimilar and similar visual distraction conditions.
 
-- "Dissim - Sim" ➞ The difference between the dissimilar and similar visual distraction conditions, holding constant auditory distraction.
+- "Dissim - Sim" ➞ TThe difference between the average number of completed trials when in the dissimilar visual distraction condition as compared to the similar visual distraction condition.
 
 ```{r, wthncontrasts}
 aud_contrasts <- list(
@@ -112,15 +113,19 @@ vis_contrasts <- list(
 )
 ```
 
-Let's now obtain the main effects of our two auditory-distraction contrasts. To do so, create the `emms_aud` object. Then, call `emmeans()` and place `mod` in the "Object" argument and the `Auditory` column in the "Specs" argument. Among other things, this will generate the row means of auditory distraction (holding each level of visual distraction constant).
-
-Next, let's generate and store analysis of the main effects of each of our auditory contrasts. To do so, create `aud_fx`, then call the `contrast()` function from the emmeans package, setting `emms_aud` in the "object" argument and `aud_contrasts` in the "method" argument.
+Let's now obtain output pertaining to our two auditory-distraction main effects contrasts. To do so, create the `emms_aud` object. Then, call `emmeans::emmeans()` and place `mod` in the "Object" argument and the `Auditory` column in the "Specs" argument. Among other things, this output will contain the row means of auditory distraction (collapsed across each level of visual distraction). Next, let's obtain statistical test output pertaining to these two contrasts. To do so, create `aud_fx`, then call `emmeans::contrast()`, setting `emms_aud` in the "Object" argument and `aud_contrasts` in the "Method" argument.
 
 ```{r, aud_mfx}
 emms_aud <- emmeans(mod, c("Auditory"))
 
 aud_fx <- contrast(emms_aud, aud_contrasts)
-knitr::kable(aud_fx, digits = 3)
+```
+```{r, kable_audfx, echo = FALSE}
+aud_display <- as.data.frame(aud_fx)
+
+aud_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Let's also follow the same steps to generate and store analysis of the main effects of each of our visual contrasts.
@@ -129,35 +134,48 @@ Let's also follow the same steps to generate and store analysis of the main effe
 emms_vis <- emmeans(mod, c("Visual"))
 
 vis_fx <- contrast(emms_vis, vis_contrasts)
-knitr::kable(vis_fx, digits = 3)
+```
+```{r, kable_vis, echo = FALSE}
+vis_display <- as.data.frame(vis_fx)
+
+vis_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
-Next, let's generate tests of each of our interaction contrasts, and store them within `int_fx`. This will largely follow the same steps as for our main effects contrasts. Note that `emms_int` will not generate marginal means, but rather generate cell means for each of the 9 possible conditions.
+Next, let's generate tests of each of our interaction contrasts. Note that our interaction contrasts are necessarily the products of our A and B contrasts. These will be stored within `int_fx`. Also note that `emms_int` will not generate marginal means, but rather generate cell means for each of the 9 possible cells in the (3 x 3) design.
 
 ```{r, intfx}
 emms_int <- emmeans(mod, c("Auditory", "Visual"))
 
 int_fx <- contrast(emms_int, interaction = list(aud_contrasts, vis_contrasts))
-knitr::kable(int_fx, digits = 3)
+```
+```{r, kable_int, echo = FALSE}
+int_display <- as.data.frame(int_fx)
+
+int_display |> 
+  select(Auditory_custom:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Finally, let's call `psyci()` to generate our SCIs. Within `psyci()`, specify the following:
 
 - The model is the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
 
-- The contrast_tables argument is set to take in a list of our audio and visual main effects as well as the interaction effects.
+- The contrast_tables argument is set to take in a list statistical output pertaining to our audio and visual main effects contrasts as well as our interaction effects.
 
 - The method is set as "bf" to indicate a Bonferroni adjustment should be enacted.
 
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
-```{r scis}
+```{r, scis}
 output <- psyci(
   model = mod, 
   contrast_tables = list(aud_fx, vis_fx, int_fx), 
   method = "bf"
 ) 
-
+```
+``` {r, kabletable, echo = FALSE}
 display <- output %>%
   unclass() %>%
   bind_rows() %>%
@@ -184,7 +202,8 @@ output_ind <- psyci(
   contrast_tables = c(aud_fx, vis_fx, int_fx),
   method = "ind"
 )
-
+```
+```{r, kabletable_ind, echo = FALSE}
 display_ind <- output_ind %>%
   unclass() %>%
   bind_rows() %>%
@@ -202,12 +221,11 @@ display_ind[4, 1] <- NA
 
 knitr::kable(display_ind, digits = 3)
 ```
-
 ## The Interpretation
 
 By using PsyR to generate confidence intervals, one can interpret data with respect to effect size. This section will attempt to highlight how this added information can facilitate a more nuanced interpretation of the data.
 
-**Main Effects**
+#### Main Effects
 
 It should be noted that in a factorial design, main effects contrasts tend to be of little interest to a researcher. This is because they average across all points of one of the independent variables. To illustrate why this is often of little interest, the visual factor in the current design features a control condition with no intervention. As such, the main effect of auditory distraction, which holds constant visual distraction, in part assesses differences between subjects with no visual distraction. In a design with random assignment to conditions, there will be no differences between groups without intervention, and as such a main effects analysis is somewhat redundant. Nonetheless, the following may be said.
 
@@ -215,7 +233,7 @@ It should be noted that in a factorial design, main effects contrasts tend to be
 
 - Holding constant auditory distraction, the number of trials responded to in the average of the dissimilar and similar visual distraction conditions exceeded that of the control no distraction condition by between 3.125 and 5.875 trials. However, no significant difference was detected when comparing dissimilar to similar visual distraction conditions (-0.650, 2.650).
 
-**Interactions**
+#### Interactions
 
 Given the goal of the current research is to quantify the impact of a simultaneous manipulation to both within-subjects factors, the contrasts of greatest interest tend to be interactions. For our interaction contrasts, the following conclusions may be drawn.
 
@@ -223,7 +241,7 @@ Given the goal of the current research is to quantify the impact of a simultaneo
 
 - Exposure to a dissimilar visual distractor, as compared to a similar visual distractor, resulted in significantly more trial completions when in the high auditory distraction condition as compared to the average of the medium or low auditory distraction conditions (0.132, 5.868). However, there was not a significant difference between the low and medium auditory distractions conditions (-6.089, 2.089).
 
-**Thresholds of Importance**
+#### Thresholds of Importance
 
 An SCI approach can be especially useful if thresholds of importance are introduced. Suppose, for example, that **a difference of two trials** was the smallest difference of importance. In this case, our interpretation may change. For example:
 
@@ -231,14 +249,14 @@ An SCI approach can be especially useful if thresholds of importance are introdu
 
 - Exposure to a dissimilar visual distractor, as compared to a similar visual distractor, resulted in significantly more trial completions when in the high auditory distraction condition as compared to the average of the medium or low auditory distraction conditions 0.132, 5.868). This increase may or may not be of interest to the researcher, as 0.132 \< 2. However, there was not a significant difference between the low and medium auditory distractions conditions (-6.089, 2.089).
 
-**PCER Analysis**
+#### PCER Analysis
 
 Given the chosen A and B contrasts are orthogonal, a PCER analysis is appropriate and more powerful than a planned analysis with a bonferonni procedure. This increase in power can be revealed by comparing the PsyR generated SCIs in the planned analysis output to the individual PCER analysis output. In some cases, such as the interaction of Low - High with None-Some, this has resulted in divergence between the two outputs; this contrast, which was previously not significant when analysed using a Bonferonni procedure, is now significant under a PCER analysis.
 
 ------------------------------------------------------------------------
 
-```{r, echo=FALSE, fig.align='center', out.width='50%'}
-knitr::include_graphics("../man/figures/PsyR.png")
+```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
+knitr::include_graphics("../man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------
