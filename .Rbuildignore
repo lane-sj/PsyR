@@ -9,3 +9,7 @@
 ^scripts$
 ^PSY-source_no-touchy$
 ^references$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
