@@ -1,11 +1,14 @@
 ---
-title: "manual-calc_crit-values"
+title: "Manually Calculating Critical Constants"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{manual-calc_crit-values}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+bibliography: references.bib
 ---
+
+A vignette to demonstrate how to manually calculate critical constants (CCs), and corresponding confidence intervals (CIs). This follows the methodology detailed in [@bird2002]. This vignette will show how to calculate a CC using PsyR for an individual analysis, a planned analysis using both a Bonferroni adjustment, and a post-hoc analysis using a Scheffé method.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -14,74 +17,63 @@ knitr::opts_chunk$set(
 )
 ```
 
+Let's load PsyR, which contains the necessary functions from which to compute CCs and subsequent CIs.
+
 ```{r setup}
 library(PsyR)
 ```
 
-Sometimes you just want to manually calculate a critical value yourself, and the 
-consequent confidence intervals. Here is how you do that:
-
-We are going to assume a contrast SE of 2.5, and an alpha rate of 0.05.
-Let's also assume a 2 (within) x 2 (between) design, with 25 participants in each group.
-Let's also just assume:
-df within of 1,
-a df between of 2, 
-and a df error of 98.
+For the purposes of this vignette, let's assume that we are analysing data from a 2 x (2) between x within design, with *n* = 25 participants per group. Let's also assume a contrast standard error of 2.5, an ⍺ of .05, within degrees of freedom (df) of 1, between df of 2, and a df error of N - J = 98. So let's assign each of these values to an object.
 
 ```{r, setup vars}
-
 v_w <- 1
 v_b <- 2
 v_e <- 98
-SE = 2.5
+SE  <- 2.5
 ```
 
-First lets calculate the critical constant for each method:
+## Calculating Critical Constants
 
-Individual t:
+#### Individual t
 
 ```{r ind t}
-
 cc_ind_t(v_e)
-
 ```
+
+#### Bonferonni corrected t
 
 Bonferroni corrected t, assuming 2 contrasts in the family of whichever contrasts...
 
 ```{r bonf t}
-
 k = 2
-cc_bonf_t(v_e=v_e, n_k = 2)
-
+cc_bonf_t(v_e = v_e, n_k = 2)
 ```
 
-Post-hoc Scheffe adjustment for the between family
+#### Post-hoc Scheffé adjustments
+
+**Between Family**
 
 ```{r, ph_b}
-
-cc_ph_b(v_b=v_b, v_e=v_e)
-
+cc_ph_b(v_b = v_b, v_e = v_e)
 ```
 
-
-Or post-hoc Scheffe adjustment for the within family
+**Within Family**
 
 ```{r, ph_w}
-
 cc_ph_w(v_w=v_w, v_e=v_e)
 ```
 
-or Between x within post-hoc using Roy's GCR
+**Between x Within, using Roy's GCR**
 
 ```{r, ph_bw}
-
 cc_ph_bw(v_w, v_b, v_e)
 ```
+
+## Calculating Confidence Intervals
 
 Let's assume we'll use this CC to construct our confidence intervals ourselves. We can do that as follows:
 
 ```{r, cis}
-
 cc <- cc_ph_bw(v_w, v_b, v_e)
 compute_contrast_ci(cc, SE)
 ```
@@ -111,4 +103,3 @@ v_e = 96
 cc <- cc_smr(p, q, v_e, .05)
 print(cc)
 ```
-
