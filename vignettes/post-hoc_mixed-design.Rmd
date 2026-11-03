@@ -36,7 +36,7 @@ library(tidyverse)
 
 ## The Data
 
-The `social_anxiety` dataframe contains the results of an experiment with N = 90 participants assessing a new treatment for social anxiety using a 3 x (4) design. Participants are randomly allocated to one of three levels of the between-subjects independent variable: a minimum contact control condition, a standard treatment, or a new treatment. All participants are measured on four occasions: immediately before treatment, immediately after treatment, at a 3 month follow-up, and at a 6 month follow-up. The dependent variable is social anxiety rating, where a lower score is indicative of lower social anxiety.
+The `social_anxiety` dataframe contains the results of an experiment with *N* = 90 participants assessing a new treatment for social anxiety using a 3 x (4) design. Participants are randomly allocated to one of three levels of the between-subjects independent variable: a minimum contact control condition, a standard treatment, or a new treatment. All participants are measured on four occasions: immediately before treatment, immediately after treatment, at a 3 month follow-up, and at a 6 month follow-up. The dependent variable is social anxiety rating, where a lower score is indicative of lower social anxiety.
 
 Lets load the data, then call the `head()` function to print the first 5 rows.
 
@@ -45,7 +45,7 @@ data(social_anxiety)
 head(social_anxiety, 5)
 ```
 
-To learn more about the `social_anxiety` dataframe call the help function using `?df` to open its documentation.
+To learn more about the `social_anxiety` dataframe, call the help function using `?df`.
 
 ```{r, what_socialanx, message = FALSE, warning = FALSE, eval = FALSE}
 ?social_anxiety
@@ -89,9 +89,7 @@ Lets prepare to run some statistical tests!
 
 Here we will create the building blocks for three distinct tests of the homogeneity hypothesis (one per family) and corresponding SCIs per family. The following code builds towards this approach.
 
-First, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, let's create the object `mod` by calling the `aov_ez()` function. Place the "Subject" column in the ID argument, "Score" as our dependent variable, `social_anxiety` as our dataframe, "Group" as the between-subjects factor, and "Session" as the within-subjects factor. Finally, create the `emms_win` object, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to "Session" (which, as a reminder, is a column of the factor datatype that identifies what level of the within-subjects independent variable the score belongs to). Running this code will give us the estimated marginal means for each level of the within-subjects independent variable.
-
-Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Thus, this workflow differs from the more common omnibus ANOVA with follow up significance tests.
+First, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, let's create the object `mod` by calling the `afex::aov_ez()` function. Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. Place the "Subject" column in the "ID" argument, "Score" as our dependent variable, `social_anxiety` as our dataframe, "Group" as the between-subjects factor, and "Session" as the within-subjects factor. Finally, create the `emms_win` object, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to "Session" (which, as a reminder, is a column of the factor datatype that identifies what level of the within-subjects independent variable the score belongs to). Running this code will give us the estimated marginal means for each level of the within-subjects independent variable.
 
 ```{r, model, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
@@ -105,16 +103,15 @@ mod <- aov_ez(
 )
 
 emms_win <- emmeans(mod, "Session")
-knitr::kable(emms_win, digits = 3)
 ```
 
-Now let's define and obtain our between-subjects contrast table. To do so, create the `btwn_contrasts` object, calling `list()` to define our contrasts, which compare the following:
+Now let's define and obtain our between-subjects main effects contrasts. To do so, create the `btwn_contrasts` object, calling `base::list()` to define our contrasts, which compare the following:
 
-- "Ts - C" ➞ The difference between the minimum contact Control condition and the average of the two treatment conditions.
+- "Ts - C" ➞ The difference between social anxiety scores in the the minimum contact control condition and the average of the two treatment conditions.
 
-- "NT - ST" ➞ The difference between the New and Standard treatment conditions.
+- "NT - ST" ➞ The difference between social anxiety scores in the New versus Standard treatment conditions.
 
-We can now generate an ANOVA table with tests of significance of each of these between-subjects main effects. This will display the resulting p-values from an unadjusted t-test (from emmeans) and an ANOVA F Simultaneous Test Procedure (from PsyR). To do so, create the `btwn_fx` object. Then, call the `contrast()` function from the emmeans package, setting `emms_btwn` in the "object" argument and our newly defined `btwn_contrasts` in the "method" argument.
+We can now generate ANOVA output with tests of significance of each of these between-subjects main effects. To do so, create the `btwn_fx` object. Then, call `emmeans::contrast()` setting `emms_btwn` in the "Object" argument and our newly defined `btwn_contrasts` in the "Method" argument.
 
 ```{r, btwn}
 btwn_contrasts <- list(
@@ -125,10 +122,16 @@ btwn_contrasts <- list(
 emms_btwn <- emmeans(mod, "Group")
 
 btwn_fx <- contrast(emms_btwn, btwn_contrasts)
-knitr::kable(btwn_fx, digits = 3)
+```
+```{r, kable_btwnfx, echo = FALSE}
+btwn_display <- as.data.frame(btwn_fx)
+
+btwn_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
-Let's also define and obtain our within-subjects contrast table. To do so, create the `win_contrasts` object, calling `list()` to define our contrasts, which compare the following:
+Let's also define and obtain our within-subjects main effects contrasts. To do so, create the `win_contrasts` object, calling `base::list()` to define our contrasts, which compare the following:
 
 - "Pre - Rest" ➞ The difference between the measure of social anxiety before treatment and the average of measures taken after treatment administration.
 
@@ -136,7 +139,7 @@ Let's also define and obtain our within-subjects contrast table. To do so, creat
 
 - "FU1 - FU2" ➞ The difference between the 3 and 6 month follow-up measures of social anxiety.
 
-Using an overall Hotelling's T^2^ test procedure, we can generate an ANOVA table with tests of significance of each within-subjects main effect. This will display the resulting p-values from an unadjusted t-test (from emmeans) and a Hotelling's T^2^ test (from PsyR). To do so, create the `win_fx` object. Then, call the `contrast()` function from the emmeans package, setting `emms_win` in the "object" argument and our newly defined `win_contrasts` in the "method" argument.
+Using an overall Hotelling's T^2^ test procedure, we can generate ANOVA output with tests of significance of each within-subjects main effect contrasts. To do so, create the `win_fx` object. Then, call `emmeans::contrast()`, setting `emms_win` in the "Object" argument and our newly defined `win_contrasts` in the "Method" argument.
 
 ```{r, win}
 win_contrasts <- list(
@@ -146,11 +149,16 @@ win_contrasts <- list(
 ) 
 
 win_fx <- contrast(emms_win, win_contrasts)
+```
+```{r, kable_winfx, echo = FALSE}
+win_display <- as.data.frame(win_fx)
 
-knitr::kable(win_fx, digits = 3)
+win_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
-Finally, lets create an ANOVA table of interaction effects using an overall test of Roy's GCR. This will display the resulting p-values from an unadjusted t-test (from emmeans) and a Roy's GCR test (from PsyR). To do so, create the `emms_int` object by calling `emmeans()`, placing `mod` in the object argument and outputting according to both our between-subjects and within-subjects independent variables. Next, create the `int_fx` object, calling `contrast()` and setting our newly made `emms_int` in the "object" argument and both our contrasts tables in the "method" argument.
+Finally, lets create an ANOVA table of interaction effects using an overall test of Roy's GCR. This will display the resulting p-values from an unadjusted t-test (from emmeans) and a Roy's GCR test (from PsyR). To do so, create the `emms_int` object by calling `emmeans::emmeans()`, placing `mod` in the object argument and outputting according to both our between-subjects and within-subjects independent variables. Next, create the `int_fx` object, calling `emmeans::contrast()` and setting our newly made `emms_int` in the "Object" argument and both our contrasts tables in the "Method" argument.
 
 ```{r, int}
 emms_int <- emmeans(
@@ -161,8 +169,13 @@ int_fx <- contrast(
   emms_int,
   interaction = list(btwn_contrasts, win_contrasts)
 ) 
+```
+```{r, kable_intfx, echo = FALSE}
+int_display <- as.data.frame(int_fx)
 
-knitr::kable(int_fx, digits = 3)
+int_display |> 
+  select(Group_custom:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 ### A Priori Confidence Intervals
@@ -189,7 +202,8 @@ output_bon <- psyci(
   method = "bf", 
   alpha = alphas
 ) 
-
+```
+``` {r, display_bon, echo = FALSE}
 display_bon <- output_bon %>%
   unclass() %>%
   bind_rows() %>%
@@ -225,7 +239,8 @@ output_ph <- psyci(
   method = "ph", 
   alpha = alphas
 ) 
-
+```
+``` {r, display_ph, echo = FALSE}
 display_ph <- output_ph %>%
   unclass() %>%
   bind_rows() %>%
@@ -277,7 +292,7 @@ When comparing the new treatment to the standard treatment, the following may be
 ------------------------------------------------------------------------
 
 ```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
-knitr::include_graphics("../man/figures/PsyR.png")
+knitr::include_graphics("../man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------

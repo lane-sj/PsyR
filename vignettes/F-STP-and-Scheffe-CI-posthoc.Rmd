@@ -41,7 +41,7 @@ data(fatigue)
 head(fatigue, 5)
 ```
 
-To learn more about the `fatigue` dataframe call the help function using `?df` to open its documentation.
+To learn more about the `fatigue` dataframe, call the help function using `?df`.
 
 ```{r, whatfatigue, message = FALSE, warning = FALSE, eval = FALSE}
 ?fatigue

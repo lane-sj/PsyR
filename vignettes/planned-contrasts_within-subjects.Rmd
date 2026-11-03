@@ -39,7 +39,7 @@ data(priming)
 head(priming, 5)
 ```
 
-To learn more about the `priming` dataframe call the help function using `?df` to open its documentation.
+To learn more about the `priming` dataframe, call the help function using `?df`.
 
 ```{r, whatpriming, message = FALSE, warning = FALSE, eval = FALSE}
 ?priming
@@ -68,7 +68,7 @@ priming %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, create a new object `mod` by calling the `aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `ReactionTime` column as the dependent variable, the `priming` dataframe, and the `Prime` column set as within-subjects. Finally, create a new object `emms`, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Prime`. Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the cell means for the dependent variable (Reaction Time) at each level of the independent variable (Prime Type).
+Here we will create the building blocks for first an ANOVA output, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `ReactionTime` column as the dependent variable, the `priming` dataframe, and the `Prime` column set as within-subjects. Finally, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Prime`. Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the cell means for the dependent variable (Reaction Time) at each level of the independent variable (Prime Type).
 
 ```{r, aov}
 afex_options(emmeans_model = "multivariate")
@@ -81,7 +81,6 @@ mod <- aov_ez(
 )
 
 emms <- emmeans(mod, "Prime")
-knitr::kable(emms, digits = 3)
 ```
 
 Time to define our contrasts!
@@ -99,11 +98,17 @@ experience_contrasts = list(
 )
 ```
 
-Now that we have defined our contrasts, let's store them within a contrasts table. Create the `wthn_fx` object, then call the `contrast()` function from the emmeans package, setting `emms` in the "object" argument and `experience_contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+Now that we have defined our contrasts, let's store them within a contrasts table. Create the `wthn_fx` object, then call the `emmeans::contrast()` function from the emmeans package, setting `emms` in the "object" argument and `experience_contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
 
 ```{r, compute_contrasts}
 wthn_fx <- contrast(emms, experience_contrasts)
-knitr::kable(wthn_fx, digits = 3)
+```
+```{r, kable_wthnfx, echo = FALSE}
+wthn_display <- as.data.frame(wthn_fx)
+
+wthn_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Finally, let's call `psyci()` to generate our SCIs. Within `psyci()`, specify the following:
@@ -133,8 +138,8 @@ SCIs are also useful if thresholds of importance are introduced. Imagine that a 
 
 ------------------------------------------------------------------------
 
-```{r, echo=FALSE, fig.align='center', out.width='50%'}
-knitr::include_graphics("../man/figures/PsyR.png")
+```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
+knitr::include_graphics("../man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------

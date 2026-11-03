@@ -38,13 +38,13 @@ data(kevin_within)
 head(kevin_within, 5)
 ```
 
-To learn more about the `kevin_within` dataframe call the help function using `?df` to open its documentation.
+To learn more about the `kevin_within` dataframe, call the help function using `?df`.
 
 ```{r, whatfatigue, message = FALSE, warning = FALSE, eval = FALSE}
 ?kevin_within
 ```
 
-When working with this dataframe, we need the data to be in long-form. So, call `pivot_longer()`, assigning the levels of the independent variable to a new "Session" column and values to a new "Score" column. We will also call `fct_relevel()`, assigning the "Session" column as a factor and reordering the levels of the independent variable according to chronological order.
+Also, let's tidy up the data, labeling the levels of our independent variables for greater clarity.
 
 ```{r longform}
 kevin_within <- kevin_within %>%
@@ -77,15 +77,15 @@ kevin_within %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and later our CIs. This workflow can be justified as follows.
+Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. This workflow can be justified as follows.
 
 - An overall multivariate-model homogeneity test allows an ⍺-level test of the null (homogeneity) hypothesis: that, at the population level, no difference exists between conditions. For the maximal contrast, a Hotelling's T^2^ statistic [@hotelling1931] is generated and compared to an F~c~, where if T^2^ ≥ F~c~ a heterogeneity inference may be made.
 
-- The creation of CIs goes beyond a traditional hypothesis testing approach of determining the significance of a set of contrasts. Where hypothesis testing allows one to determine whether to reject the null hypothesis, CIs provide additional information regarding the directionality and magnitude of the effects at test (while maintaining a FWER \< ⍺).
+- The creation of SCIs goes beyond a traditional hypothesis testing approach of determining the significance of a set of contrasts. Where hypothesis testing allows one to determine whether to reject the null hypothesis, SCIs provide additional information regarding the directionality and magnitude of the effects at test (while maintaining a FWER \< ⍺).
 
-The following code builds towards this approach. First, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, create a new object `mod` by calling the `aov_ez()` function which takes in the `Subject` column to identify subjects, the `Score` column as the dependent variable, the `kevin_within` dataframe, and the `Group` column set as between-subjects. Finally, create a new object `emms`, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Session`. Of note, defining mod in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the cell means for the dependent variable (wellbeing) at each level of the independent variable (time of measurement).
+The following code builds towards this approach. First, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function which takes in the `Subject` column to identify subjects, the `Score` column as the dependent variable, the `kevin_within` dataframe, and the `Group` column set as between-subjects. Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. Finally, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Session`. Running this code will give us the cell means for the dependent variable (wellbeing) at each level of the independent variable (time of measurement).
 
-```{r model}
+```{r model, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
 
 mod <- aov_ez(
@@ -96,14 +96,13 @@ mod <- aov_ez(
 )
 
 emms <- emmeans(mod, "Session")
-knitr::kable(emms, digits = 3)
 ```
 
 Time to define our contrasts!
 
 To do so, it is important to look at the stated aims of the research, the maximal contrast, and the pattern of sample means in our data.
 
-In this case, simple contrasts examining the difference in wellbeing at each measurement point seem like appropriate questions to ask of the data. However, it should be noted that if a researcher wanted to define more contrasts, our methodology prevents prevents inflation of the Type I error rate, meaning that it is valid to define as many contrasts as are deemed of interest. With that being said, the following three contrasts are chosen for analysis
+In this case, contrasts examining the difference in wellbeing at each measurement point seem like appropriate questions to ask of the data. However, it should be noted that if a researcher wanted to define more contrasts, our methodology prevents prevents inflation of the Type I error rate, meaning that it is valid to define as many contrasts as are deemed of interest. With that being said, the following three contrasts are chosen for analysis
 
 - "Post - Pre" ➞ The difference between post and pre-intervention scores.
 
@@ -111,7 +110,7 @@ In this case, simple contrasts examining the difference in wellbeing at each mea
 
 - "FU - Pre" ➞ The difference between 6 month follow-up and pre-intervention scores.
 
-Having defined our contrasts, let's store them within a contrasts table. Create the `cnt_res` object, then call the `contrast()` function from the emmeans package, setting `emms` in the "object" argument and `contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+Having defined our contrasts, let's store them within a contrasts table. Create the `cnt_res` object, then call the `emmeans::contrast()` function from the emmeans package, setting `emms` in the "Object" argument and `contrasts` in the "Method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
 
 ```{r phoc}
 contrasts <- list(
@@ -121,7 +120,13 @@ contrasts <- list(
 )
 
 cnt_res <- contrast(emms, contrasts)
-knitr::kable(cnt_res, digits = 3)
+```
+```{r, kable_cntres, echo = FALSE}
+cnt_res_display <- as.data.frame(cnt_res)
+
+cnt_res_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 ### The (Initial) Interpretation
@@ -165,7 +170,7 @@ Despite not seeing any significant results, the extra information obtained throu
 ------------------------------------------------------------------------
 
 ```{r, echo=FALSE, fig.align='center', out.width='50%'}
-knitr::include_graphics("../man/figures/PsyR.png")
+knitr::include_graphics("../man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------

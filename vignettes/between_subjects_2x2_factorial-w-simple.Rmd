@@ -32,6 +32,12 @@ data(drive_sleepy)
 head(drive_sleepy, 5)
 ```
 
+To learn more about the `drive_sleepy` dataframe, call the help function using `?df`.
+
+```{r, whatfatigue, message = FALSE, warning = FALSE, eval = FALSE}
+?drive_sleepy
+```
+
 Also, let's tidy up the data, labeling the levels of our independent variable for greater clarity.
 
 ```{r longform}

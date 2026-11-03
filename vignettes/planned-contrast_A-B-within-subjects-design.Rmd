@@ -39,7 +39,7 @@ data(distraction)
 head(distraction, 5)
 ```
 
-To learn more about the `distraction` dataframe, call the help function using `?df` to open its documentation.
+To learn more about the `distraction` dataframe, call the help function using `?df`.
 
 ```{r, whatpriming, message = FALSE, warning = FALSE, eval = FALSE}
 ?distraction
@@ -72,7 +72,7 @@ distraction %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. To start, let's create the object `mod` by calling the `afex::aov_ez()` function. Of note, defining `mod` in this way will enable emmeans to compute estimated marginal means from which to apply contrasts of interest. Place the `Subject` column in the ID argument, `Performance` as our dependent variable, `distraction` as our dataframe, and `Auditory` and `Visual` as our within-subjects factors.
+Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. To start, let's create the object `mod` by calling the `afex::aov_ez()` function. Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. Place the `Subject` column in the ID argument, `Performance` as our dependent variable, `distraction` as our dataframe, and `Auditory` and `Visual` as our within-subjects factors.
 
 ```{r, aov, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")

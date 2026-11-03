@@ -73,7 +73,7 @@ depression %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, create a new object `mod` by calling the `aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `Happiness` column as the dependent variable, the `depression` dataframe, the `Group` column as the between-subjects IV, and the `Time` column as the within-subjects IV. Finally, create a new object `emms`, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Group` and `Time`. Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the cell means for the dependent variable (Happiness) at each level of the independent variables (Treatment Group, Time).
+Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `Happiness` column as the dependent variable, the `depression` dataframe, the `Group` column as the between-subjects IV, and the `Time` column as the within-subjects IV. Finally, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Group` and `Time`. Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. Running this code will give us the cell means for the dependent variable (Happiness) at each level of the independent variables (Treatment Group, Time).
 
 ```{r aov, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
@@ -116,12 +116,18 @@ within_contrasts = list(
 )
 ```
 
-Now that we have defined our contrasts, let's obtain their estimated marginal means. First, let's address our between-subjects contrasts. To do so, create `emms_grp` by calling `emmeans()`, placing `mod` in the "object" argument and outputing based upon the between-subjects factor `Group`. Next, let's store results of significance tests of main effects of our between-subjects factor within a table. Create the `btwn_fx` object, then call the `contrast()` function from the emmeans package, setting `emms_grp` in the "object" argument and `btwn_contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+Now that we have defined our contrasts, let's obtain their estimated marginal means. First, let's address our between-subjects contrasts. To do so, create `emms_grp` by calling `emmeans::emmeans()`, placing `mod` in the "Object" argument and outputing based upon the between-subjects factor `Group`. Next, let's store results of significance tests of main effects of our between-subjects factor within a table. Create the `btwn_fx` object, then call `emmeans::contrast()`, setting `emms_grp` in the "Object" argument and `btwn_contrasts` in the "Method" argument. The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
 
 ```{r, btwn_fx}
 emms_btwn <- emmeans(mod, c("Group"))
 btwn_fx <- contrast(emms_btwn, between_contrasts)
-knitr::kable(btwn_fx, digits = 3)
+```
+```{r, kable_btwn_fx, echo = FALSE}
+btwn_display <- as.data.frame(btwn_fx)
+
+btwn_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Following similar steps as with our between-subjects contrasts, let's obtain the estimated marginal means for the different time points of measurement and store the results of hypothesis tests of the main effect of each contrast within the `win_fx` object.
@@ -129,32 +135,50 @@ Following similar steps as with our between-subjects contrasts, let's obtain the
 ```{r, win_fx}
 emms_win <- emmeans(mod, c("Time"))
 win_fx <- contrast(emms_win, within_contrasts)
-knitr::kable(win_fx, digits = 3)
+```
+```{r, kable_win_fx, echo = FALSE}
+win_display <- as.data.frame(win_fx)
+
+win_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
-Finally, let's generate output of significance tests of our interaction contrasts (i.e. the interaction of our between and within-subjects contrasts). To do so, create `int_fx` and call `contrast()`. Place `emms` in the "Object" argument (which, as a reminder, contains the cell means of our between x within-subjects conditions), and place a list of our between and within-subjects contrasts in the "interaction" argument.
+Finally, let's generate output of significance tests of our interaction contrasts (i.e. the interaction of our between and within-subjects contrasts). To do so, create `int_fx` and call `emmeans::contrast()`. Place `emms` in the "Object" argument (which, as a reminder, contains the cell means of our between x within-subjects conditions), and place a list of our between and within-subjects contrasts in the "interaction" argument.
 
 ```{r int_fx}
 int_fx <- contrast(
   emms, 
   interaction = list(between_contrasts, within_contrasts)
 )
-knitr::kable(int_fx, digits = 3)
+```
+```{r, kable_int_fx, echo = FALSE}
+int_display <- as.data.frame(int_fx)
+
+int_display |> 
+  select(Group_custom:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 ### Simple Effects
 
 In this analysis, we will define a single all factorial family consisting of the A(b), B(a), A, B and AB effects. This will allow us to investigate both *a* and *b* simple effects
 
-Let's start by calculating the cell means for our within x between-subjects factors. To do so, create `win_by_grp` by calling `emmeans()`. Place `mod` in the "Object" argument, and `Time` by `Group` in the "Specs" argument. Next, create `win_by_grp_fx` by calling `contrast()`. Place our newly made `win_by_grp` in the "Object" argument and `within_contrasts` in the "Method" argument. Thus, hypothesis tests of each interaction contrast will be stored within `win_by_grp_fx`.
+Let's start by calculating the cell means for our within x between-subjects factors. To do so, create `win_by_grp` by calling `emmeans::emmeans()`. Place `mod` in the "Object" argument, and `Time` by `Group` in the "Specs" argument. Next, create `win_by_grp_fx` by calling `emmeans::contrast()`. Place our newly made `win_by_grp` in the "Object" argument and `within_contrasts` in the "Method" argument. Thus, hypothesis tests of each interaction contrast will be stored within `win_by_grp_fx`.
 
 ```{r, win_at_grp}
 win_by_grp <- emmeans(mod, ~ Time|Group)
 win_by_grp_fx <- contrast(win_by_grp, method = within_contrasts)
-knitr::kable(win_by_grp_fx, digits = 3)
+```
+```{r, kable_wingrp_fx, echo = FALSE}
+wingrp_display <- as.data.frame(win_by_grp_fx)
+
+wingrp_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
-Next, let's define our desired simple effects and apply them to obtain simple effects contrasts for each of our between-subjects contrasts. Here, we are only interested in the post and follow-up within-subjects levels. To obtain these, create the `within_simple` object and call `list()` to store within it the post and follow up levels. After this, create the `btwn_by_treat_fx` object, within which we will store the results of hypothesis tests of our A(b) simple effects contrasts. To do so, call `contrast()`, placing `emms` in the "Object" argument and a list of our between-subjects and within-simple contrasts in the "Interaction" argument.
+Next, let's define our desired simple effects and apply them to obtain simple effects contrasts for each of our between-subjects contrasts. Here, we are only interested in the post and follow-up within-subjects levels. To obtain these, create the `within_simple` object and call `list()` to store within it the post and follow up levels. After this, create the `btwn_by_treat_fx` object, within which we will store the results of hypothesis tests of our A(b) simple effects contrasts. To do so, call `emmeans::contrast()`, placing `emms` in the "Object" argument and a list of our between-subjects and within-simple contrasts in the "Interaction" argument.
 
 ```{r, btwn_at_within}
 within_simple <-  list(
@@ -162,7 +186,13 @@ within_simple <-  list(
   "FU*" = c(0, 0, 1)
 )
 btwn_by_treat_fx <- contrast(emms, interaction = list(between_contrasts, within_simple))
-knitr::kable(btwn_by_treat_fx, digits = 3)
+```
+```{r, kable_btwntreat, echo = FALSE}
+btwntreat_display <- as.data.frame(btwn_by_treat_fx)
+
+btwntreat_display |> 
+  select(Group_custom:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 ### Applying PsyR to generate Confidence Intervals
@@ -194,7 +224,8 @@ output <- psyci(
   alpha = alphas,
   family_group = rep("all_factorial", length(all_fx))
 )
-
+```
+``` {r, kable_output, echo = FALSE}
 display <- output %>%
   unclass() %>%
   bind_rows() %>%
@@ -241,7 +272,7 @@ Engaging in a simple effects analysis, as compared to an analysis of just main a
 ------------------------------------------------------------------------
 
 ```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
-knitr::include_graphics("../man/figures/PsyR.png")
+knitr::include_graphics("../man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------

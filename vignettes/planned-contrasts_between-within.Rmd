@@ -39,7 +39,7 @@ data(depression)
 head(depression, 5)
 ```
 
-To learn more about the `depression` dataframe, call the help function using `?df` to open its documentation.
+To learn more about the `depression` dataframe, call the help function using `?df`.
 
 ```{r, whatdepression, message = FALSE, warning = FALSE, eval = FALSE}
 ?depression
@@ -73,9 +73,9 @@ depression %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for first an ANOVA output, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, create a new object `mod` by calling the `aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `Happiness` column as the dependent variable, the `depression` dataframe, the `Group` column as the between-subjects IV, and the `Time` column as the within-subjects IV. Finally, create a new object `emms`, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Group` and `Time`. Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the cell means for the dependent variable (Happiness) at each level of the independent variables (Treatment Group, Time).
+Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `Happiness` column as the dependent variable, the `depression` dataframe, the `Group` column as the between-subjects IV, and the `Time` column as the within-subjects IV. Finally, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Group` and `Time`. Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. Running this code will give us the cell means for the dependent variable (Happiness) at each level of the independent variables (Treatment Group, Time).
 
-```{r aov}
+```{r aov, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
 
 mod <- aov_ez(
@@ -87,7 +87,6 @@ mod <- aov_ez(
 )
 
 emms <- emmeans(mod, c("Group", "Time"))
-knitr::kable(emms, digits = 3)
 ```
 
 Time to define our contrasts!
@@ -105,12 +104,18 @@ between_contrasts = list(
 )
 ```
 
-Now that we have defined our between-subjects contrasts, let's obtain their estimated marginal means. To do so, create `emms_grp` by calling `emmeans()`, placing `mod` in the "object" argument and outputing based upon the between-subjects factor `Group`. Next, let's store results of significance tests of main effects of our between-subjects factor within a table. Create the `btwn_fx` object, then call the `contrast()` function from the emmeans package, setting `emms_grp` in the "object" argument and `btwn_contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+Now that we have defined our between-subjects contrasts, let's obtain their estimated marginal means. To do so, create `emms_grp` by calling `emmeans::emmeans()`, placing `mod` in the "object" argument and outputing based upon the between-subjects factor `Group`. Next, let's store results of significance tests of main effects of our between-subjects factor within a table. Create the `btwn_fx` object, then call the `emmeans::contrast()` function from the emmeans package, setting `emms_grp` in the "object" argument and `btwn_contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
 
 ```{r, getbtwn}
 emms_grp <- emmeans(mod, c("Group"))
 btwn_fx <- contrast(emms_grp, between_contrasts)
-knitr::kable(btwn_fx, digits = 3)
+```
+```{r, kable_btwnx, echo = FALSE}
+btwn_display <- as.data.frame(btwn_fx)
+
+btwn_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Let's also define our within-subjects contrasts. Following similar logic as with our between-subjects contrasts, the following within-subjects contrasts are chosen for analysis.
@@ -131,17 +136,29 @@ Following similar steps as with our between-subjects contrasts, let's obtain the
 ```{r wthn}
 emms_win <- emmeans(mod, "Time")
 win_fx <- contrast(emms_win, within_contrasts)
-knitr::kable(win_fx, digits = 3)
+```
+```{r, kable_winfx, echo = FALSE}
+win_display <- as.data.frame(win_fx)
+
+win_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
 ```
 
-Finally, let's generate output of significance tests of our interaction contrasts (i.e. the interaction of our between and within-subjects contrasts). To do so, create `int_fx` and call `contrast()`. Place `emms` in the "object" argument (which, as a reminder, contains the cell means of our between x within-subjects conditions), and place a list of our between and within-subjects contrasts in the "interaction" argument.
+Finally, let's generate output of significance tests of our interaction contrasts (i.e. the interaction of our between and within-subjects contrasts). To do so, create `int_fx` and call `emmeans::contrast()`. Place `emms` in the "object" argument (which, as a reminder, contains the cell means of our between x within-subjects conditions), and place a list of our between and within-subjects contrasts in the "interaction" argument.
 
 ```{r int_fx}
 int_fx <- contrast(
   emms, 
   interaction = list(between_contrasts, within_contrasts)
 )
-knitr::kable(int_fx, digits = 3)
+```
+```{r, kable_intfx, echo = FALSE}
+int_display <- as.data.frame(int_fx)
+
+int_display |> 
+  select(Group_custom:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Finally, let's call `psyci()` to generate our SCIs. Within `psyci()`, specify the following:
@@ -155,11 +172,14 @@ Finally, let's call `psyci()` to generate our SCIs. Within `psyci()`, specify th
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
 ```{r psyci}
-psyci(
+output <- psyci(
   model = mod, 
   contrast_tables = list(btwn_fx, win_fx, int_fx), 
   method = "bf"
-) %>%
+) 
+```
+```{r, kable_output, echo = FALSE}
+output %>%
   unclass() %>%
   bind_rows() %>%
   rename(
@@ -202,7 +222,7 @@ In situations in which there are established thresholds of importance, an SCI ap
 ------------------------------------------------------------------------
 
 ```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
-knitr::include_graphics("../man/figures/PsyR.png")
+knitr::include_graphics("../man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------
