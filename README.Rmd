@@ -28,8 +28,8 @@ knitr::opts_chunk$set(
 PsyR utilises procedures described by @bird2002 to compute simultaneous
 confidence intervals for planned and post-hoc contrasts from ANOVA
 models. Simultaneous confidence intervals give a researcher greater
-insight into the magnitude of an effect captured by a contrast. This can
-facilitate more nuanced interpretation of results.
+insight into the magnitude of an effect captured by a contrast. This can allow for 
+more nuanced interpretation of results with respect to effect size.
 
 ## Installation
 
@@ -63,7 +63,7 @@ simultaneous confidence intervals. An average workflow will go as follows:
 - Use `PsyR::psyci()` to generate simultaneous confidence intervals.
 
 All of the following examples will use the post-hoc method. See
-@bird2002 for details. Also, check out the "Articles" tab for detailed examples of analysis pertaining to various designs,
+@bird2002 for details. Also, check out the "Articles" tab for detailed examples of analysis pertaining to various designs.
 
 ```{r b_example, message = FALSE, warning = FALSE}
 # load relevant packages
@@ -198,7 +198,7 @@ psyci(
 ------------------------------------------------------------------------
 
 ```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
-knitr::include_graphics("../man/figures/logo.png")
+knitr::include_graphics("./man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------
