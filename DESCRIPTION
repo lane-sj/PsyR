@@ -1,9 +1,15 @@
 Package: PsyR
 Title: Confidence Intervals for ANOVA Contrasts
 Version: 0.0.0.9000
-Authors@R: 
+Authors@R: c(
     person("Kelly", "Garner", , "kelly.grace.garner@unsw.edu.au", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0002-0690-6941"))
+           comment = c(ORCID = "0000-0002-0690-6941")),
+    person("Marios", "Panayi", , "m.panayi@unsw.edu.au", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-2635-5638")),
+    person("Chris", "Nolan", , "christopher.nolan@unsw.edu.au", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-0621-2907")),
+    person("Sadie", "Lane", role = c("aut", "cre"))
+  )
 Description: Computes confidence intervals for planned and post-hoc contrasts
     from ANOVA models, including Bonferroni, post-hoc, and
     Studentized Maximum Root procedures.
