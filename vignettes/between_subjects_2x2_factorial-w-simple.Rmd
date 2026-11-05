@@ -53,12 +53,13 @@ drive_sleepy <- drive_sleepy %>%
 
 Next, let's visualise our data. Doing so allows us to more intuitively understand its layout.
 
-```{r graphit, fig.width = 7, fig.height = 4, dev = 'svg'}
+```{r graphit, fig.width = 7, fig.height = 4}
 drive_sleepy |> 
   ggplot(aes(x = nvh, y = performance, colour = sleep_deprivation, shape = sleep_deprivation)) +
     stat_summary(fun = mean, geom = "point", size = 3, aes(group = sleep_deprivation)) +
     stat_summary(fun = mean, geom = "line", aes(group = sleep_deprivation)) +
-    theme_classic(base_size = 14) 
+    theme_classic(base_size = 14) +
+  theme(legend.position = c(.85, .50))
 ```
 
 ## The Analysis

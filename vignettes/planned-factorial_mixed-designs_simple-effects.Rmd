@@ -58,7 +58,7 @@ depression <- depression %>%
 
 Next, let's visualise our data. Doing so allows us to more intuitively understand its layout.
 
-```{r plothappiness,  fig.width = 7, fig.height = 4, dev = 'svg', message = FALSE, warning = FALSE}
+```{r plothappiness,  fig.width = 7, fig.height = 4, message = FALSE, warning = FALSE}
 depression %>% 
   group_by(Group, Time) %>%
   summarise(mean_happiness = mean(Happiness)) %>%
@@ -66,7 +66,8 @@ depression %>%
   geom_point(aes(fill = Group, shape = Group), size = 3) +
   geom_line() + 
   scale_shape_manual(values = c(21:24)) +
-  theme_classic(base_size = 14)
+  theme_classic(base_size = 14) +
+  theme(legend.position = c(.15, .80))
 ```
 
 ## The Analysis

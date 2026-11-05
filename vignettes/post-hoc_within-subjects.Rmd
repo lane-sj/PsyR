@@ -48,29 +48,23 @@ Also, let's tidy up the data, labeling the levels of our independent variables f
 
 ```{r longform}
 kevin_within <- kevin_within %>%
-  pivot_longer(c("Pre", "Post", "FU"),
+  pivot_longer(
+    c("Pre", "Post", "FU"),
     names_to = "Session",
     values_to = "Score"
-  )
-
-kevin_within <- kevin_within %>%
-  mutate(
-    Session = fct_relevel(
-      Session, 
-      "Pre", 
-      "Post", 
-      "FU"
-    )
+  ) %>%
+  mutate(Session = fct_relevel(Session, "Pre", "Post", "FU")
   )
 ```
 
 Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (in addition to other methods) can be used to inform which contrasts should be analysed.
 
-```{r boxplotit, fig.width = 7, fig.height = 4, dev = 'svg'}
+```{r boxplotit, fig.width = 7, fig.height = 4}
 kevin_within %>%
   ggplot(aes(x = Session, y = Score, fill = Session)) +
   geom_boxplot() +
-  theme_classic(base_size = 14)
+  theme_classic(base_size = 14) +
+  theme(legend.position = c(.15, .85))
 ```
 
 ## The Analysis

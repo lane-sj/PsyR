@@ -71,7 +71,7 @@ social_anxiety <- social_anxiety %>%
 
 Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (alongside other methods) can be used to inform which contrasts should be analysed. This is especially relevant for post-hoc analyses, where we may notice trends and patterns emerging that could not have been conceptualised a priori.
 
-```{r, linegraphit, fig.width = 7, fig.height = 4, message = FALSE, warning = FALSE, dev = 'svg'}
+```{r, linegraphit, fig.width = 7, fig.height = 4, message = FALSE, warning = FALSE}
 social_anxiety %>%
   group_by(Group, Session) %>%
   summarise(
@@ -80,7 +80,8 @@ social_anxiety %>%
   ggplot(aes(x = Session, y = Score, colour = Group, shape = Group)) +
     geom_point() +
     geom_line(aes(group = Group)) +
-    theme_classic(base_size = 14)
+    theme_classic(base_size = 14) +
+    theme(legend.position = c(.15, .20))
 ```
 
 ## The Analysis

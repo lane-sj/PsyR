@@ -68,13 +68,14 @@ experience <- experience %>%
 
 Next, let's visualise our data. Doing so allows a more intuitive understanding of its layout.
 
-```{r plotit, fig.width = 7, fig.height = 4, dev = 'svg'}
+```{r plotit, fig.width = 7, fig.height = 4}
 experience %>% 
   ggplot(aes(x = Experience, y = Outcome, colour = Therapy, fill = Therapy, shape = Therapy)) +
   stat_summary(fun = mean, geom = "point", size = 3, aes(group = Therapy)) +
   stat_summary(fun = mean, geom = "line", aes(group = Therapy)) +
   scale_shape_manual(values = c(21:24)) +
-  theme_classic(base_size = 14)
+  theme_classic(base_size = 14) +
+  theme(legend.position = c(.90, .80))
 ```
 
 ## The Analysis

@@ -58,14 +58,15 @@ distraction <- distraction %>%
 
 Next, let's visualise our data. Doing so allows a more intuitive understanding of its layout.
 
-```{r plotdata, fig.width = 7, fig.height = 4, dev = 'svg'}
+```{r plotdata, fig.width = 7, fig.height = 4}
 distraction %>% 
   ggplot(aes(x = Auditory, y = Performance, colour = Visual, fill = Visual, shape = Visual)) +
   stat_summary(fun = mean, geom = "point", size = 3, aes(group = Visual)) +
   stat_summary(fun = mean, geom = "line", aes(group = Visual)) +
   scale_shape_manual(values = c(21:24)) +
   ylim(0, 19) +
-  theme_classic(base_size = 14)
+  theme_classic(base_size = 14) +
+  theme(legend.position = c(.15, .3))
 ```
 
 ## The Analysis

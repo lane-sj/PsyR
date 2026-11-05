@@ -62,11 +62,12 @@ fatigue <- fatigue %>%
 
 Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (alongside other methods) can be used to inform which contrasts should be analysed.
 
-```{r boxplotit, fig.width = 7, fig.height = 4, dev = 'svg'}
+```{r boxplotit, fig.width = 7, fig.height = 4}
 fatigue %>%
   ggplot(aes(x = Group, y = Errors, fill = Group)) +
   geom_boxplot() +
-  theme_classic(base_size = 14)
+  theme_classic(base_size = 14) +
+  theme(legend.position = c(.15, .80))
 ```
 
 As an example, one observation that may inform a contrast could be the following: the number of driving errors increases as level of fatigue increases, and this increase is particularly strong when comparing members in the "Extreme" condition to the other conditions.

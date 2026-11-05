@@ -57,11 +57,12 @@ priming <- priming %>%
 
 Next, let's visualise our data. Doing so allows us to more intuitively understand its layout.
 
-```{r plotdata, fig.width = 7, fig.height = 4, dev = 'svg'}
+```{r plotdata, fig.width = 7, fig.height = 4}
 priming %>% 
   ggplot(aes(x = Prime, y = ReactionTime, fill = Prime)) +
   geom_boxplot() +
-  theme_classic(base_size = 14)
+  theme_classic(base_size = 14) +
+  theme(legend.position = c(.85, .80))
 ```
 
 ## The Analysis
