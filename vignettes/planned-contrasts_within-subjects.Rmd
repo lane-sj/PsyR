@@ -62,7 +62,7 @@ priming %>%
   ggplot(aes(x = Prime, y = ReactionTime, fill = Prime)) +
   geom_boxplot() +
   theme_classic(base_size = 14) +
-  theme(legend.position = c(.85, .80))
+  theme(legend.position = "none")
 ```
 
 ## The Analysis
@@ -71,7 +71,9 @@ Let's prepare to run some statistical tests!
 
 Here we will create the building blocks for first an ANOVA output, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `ReactionTime` column as the dependent variable, the `priming` dataframe, and the `Prime` column set as within-subjects. Finally, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Prime`. Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the cell means for the dependent variable (Reaction Time) at each level of the independent variable (Prime Type).
 
-```{r, aov}
+Next, let's generate and store cell means pertaining to the cross-over of each level of each factor. To do so, create `emms` and call `emmeans::emmeans()`. Place the ANOVA model `mod` in the "Object" argument and a vector containing our independent variables in the "Specs" argument. 
+
+```{r, aov, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
 
 mod <- aov_ez(
@@ -82,6 +84,12 @@ mod <- aov_ez(
 )
 
 emms <- emmeans(mod, "Prime")
+```
+```{r, aov_hidden, echo = FALSE}
+emms |> 
+  as.data.frame() |> 
+  select(Prime:df) |> 
+  knitr::kable(digits = 3)
 ```
 
 Time to define our contrasts!
