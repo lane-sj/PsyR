@@ -8,7 +8,7 @@ vignette: >
 bibliography: references.bib
 ---
 
-A vignette to help understand how to use PsyR to enact the Scheffé technique, which uses an ANOVA-F Simultaneous Test Procedure and a Scheffé Simultaneous Confidence Interval (SCI) method for making inferences for multiple contrasts [@bird2004]. This method is appropriate when participants are randomly allocated, and only 1 Independent Variable (with J levels) is present.
+A vignette to help understand how to use PsyR to enact the Scheffé technique, which uses an ANOVA-F Simultaneous Test Procedure (STP) and a Scheffé Simultaneous Confidence Interval (SCI) method for making inferences for multiple contrasts [@bird2004]. This method is appropriate when participants are randomly allocated, and only 1 Independent Variable (with J levels) is present.
 
 Engaging in a Scheffé post-hoc contrasts analysis using SCIs enables a researcher to make inferences of greater specificity than other approaches. Specifically, SCIs allow for inferences regarding the magnitude of the effect captured by a contrast. This is achieved while holding the FWER below ⍺, as the Scheffé method controls the FWER for the set of all conceivable contrasts (when J \> 2). However, the flexibility this method affords comes at the cost of power, especially when compared to a planned contrasts analysis investigating only a few contrasts of interest chosen a priori to data collection.
 
@@ -32,7 +32,7 @@ library(tidyverse)
 
 ## The Data
 
-The `fatigue` dataframe contains the results of a between-subjects experiment examining the impact of driver fatigue on driving errors, where a higher score is indicative of poorer performance. Participants were assigned to one of four conditions relating to the IV of driver fatigue: Alert, Mild, Moderate, and Extreme.
+The `fatigue` dataframe contains the results of a between-subjects experiment examining the impact of driver fatigue on driving errors, where a higher score is indicative of poorer performance. Participants were assigned to one of four levels of driver fatigue: Alert, Mild, Moderate, and Extreme.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -47,7 +47,7 @@ To learn more about the `fatigue` dataframe, call the help function using `?df`.
 ?fatigue
 ```
 
-When working with this dataframe, we need the independent variables to be represented as factors (rather than doubles). So, call `factor()` reassign the "Group" column to the factor datatype, and to relabel the levels of the driver fatigue independent variable.
+Also, let's tidy up the data, labelling the levels of our independent variable for greater clarity.
 
 ```{r sortfatigue}
 fatigue <- fatigue %>%
@@ -60,72 +60,82 @@ fatigue <- fatigue %>%
   )
 ```
 
-Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (alongside other methods) can be used to inform which contrasts should be analysed.
+Next, let's visualise our data. Doing so allows us to more intuitively understand its layout. This is especially important in a post-hoc analysis, where contrasts of interest may be defined after looking at the pattern of sample means in the data.
 
 ```{r boxplotit, fig.width = 7, fig.height = 4}
 fatigue %>%
   ggplot(aes(x = Group, y = Errors, fill = Group)) +
   geom_boxplot() +
   theme_classic(base_size = 14) +
-  theme(legend.position = c(.15, .80))
+  theme(legend.position = "none")
 ```
 
 As an example, one observation that may inform a contrast could be the following: the number of driving errors increases as level of fatigue increases, and this increase is particularly strong when comparing members in the "Extreme" condition to the other conditions.
 
 ## The Analysis
 
-Let's prepare to run some statistical tests!
+Here we will conduct an overall ANOVA F test. If this returns a significant result (where F \> F~c~), we shall follow this up by constructing and simultaneously testing contrasts of interest. This workflow can be justified as follows.
 
-Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. This workflow can be justified as follows.
+- An ANOVA-F test allows an ⍺-level test of the null hypothesis: that, at the population level, no difference exists between conditions. Should F \> F~c~, a heterogeneity inference may be made. Thus, the ANOVA F-test essentially pre-screens the data, assessing whether any contrasts with significant effects exist. However, it should be noted that a significant ANOVA-F test result does not guarantee said contrasts will be interpretable.
 
-- An ANOVA-F test allows an ⍺-level test of the null hypothesis: that, at the population level, no difference exists between conditions. Should F ≥ F~c~, a heterogeneity inference may be made. Thus, the ANOVA F-test essentially pre-screens the data, assessing whether any contrasts with significant effects exist (albeit it should be noted that a significant ANOVA-F test result does not guarantee said contrasts will be interpretable).
+To generate and store this ANOVA-F test, let's do the following. Create the `mod` object, and then call `afex::aov_ez`. Place `id` in the "id" argument, `Errors` in the "dv" argument, the `fatigue` dataframe in the "data" argument, and our between-subjects factor `Group` in the "between" argument. Note that the generation and storage of this ANOVA model in this specific manner is essential for downstream compatibility with functions in the `emmeans` package, and for eventual generation of SCIs with PsyR.
 
-- The creation of SCIs goes beyond a traditional hypothesis testing approach of determining the significance of a set of contrasts. Where hypothesis testing allows one to determine whether to reject the null hypothesis, SCIs provide additional information regarding the directionality and magnitude of the effects at test (while maintaining a FWER \< ⍺). Such a method is compatible with an initial ANOVA-F test.
-
-The following code builds towards an eventual SCI approach. Let's create a new object `emms`, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to "Group" (which, as a reminder, is a column of the factor datatype which indicates what level of the IV each score belongs to). Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. Running this code will give us the means for each level of the independent variable.
-
-```{r, aov}
-# perform the statistical model
+```{r, aov, message = FALSE, warning = FALSE}
 mod <- aov_ez(
   "id",
   "Errors",
   fatigue,
   between = "Group"
 )
+```
+```{r, aov_hidden, echo = FALSE}
+mod |> 
+  nice() |> 
+  knitr::kable(digits = 3)
+```
+
+Having established that our overall ANOVA F-STP is significant, it is valid to continue with our analysis. Thus, let's generate and store estimated marginal means for each group of the driver fatigue factor. To do so, create `emms` and call `emmeans::emmeans()`. Place the ANOVA model `mod` in the "Object" argument and a the independent variable `Group` in the "Specs" argument. This output will eventually be used with PsyR to generate SCIs.
+
+```{r, emms, message = FALSE, warning = FALSE}
 emms <- emmeans(mod, "Group")
+```
+```{r, emms_hidden, echo = FALSE}
+emms |> 
+  as.data.frame() |> 
+  select(Group:df)
+  knitr::kable(digits = 3)
 ```
 
 Time to define our contrasts!
 
-To do so, it is important to look at the stated aims of the research, the maximal contrast, and the pattern of sample means in our data. Thus, the following four contrasts are chosen for analysis.
+In a post-hoc analysis, one should define contrasts with reference to the stated aims of the research, the pattern of sample means, and the maximal contrast. Here, the following four contrasts are chosen for analysis.
 
-- "Fatigue - Alert" ➞ The difference between the average of fatigued conditions and the Alert condition.
+- "Fatigue - Alert" ➞ The difference between the average number of driving errors made under the three fatigued conditions as compared to driving errors made when Alert.
 
-- "Extreme - Mod, Mild" ➞ The difference between Extreme fatigue and the average of Moderate and Mild fatigue.
+- "Extreme - Mod, Mild" ➞ The difference between the average number of driving errors made by participants in the Extreme fatigue condition as compared to the average of the number of driving errors made in the Moderate and Mild fatigue conditions.
 
-- "Low - High" ➞ The difference between the average of Alert and Mild fatigue versus the average of Moderate and Extreme fatigue.
+- "Low - High" ➞ The difference between the average number of driving errors made by participants in the  of Alert and Mild fatigue conditions versus the average number of driving errors made by participants in the Moderate and Extreme fatigue conditions.
 
-- "Alert - Mild" ➞ The difference between the Alert and Mild fatigue conditions.
+- "Alert - Mild" ➞ The difference between the average number of driving errors made in the Alert and Mild fatigue conditions.
 
 ```{r definecontrasts}
 between_contrasts = list(
   "Fatigue - Alert" = c(-1, 1/3, 1/3, 1/3),
-  "Extreme - Mod, Mild" = c(0, -1/2, -1/2, 1),
-  "Low - High" = c(1/2, 1/2, -1/2, -1/2),
+  "Extreme - Mod, Mild" = c(0, -0.5, -0.5, 1),
+  "Low - High" = c(0.5, 0.5, -0.5, -0.5),
   "Alert - Mild" = c(1, -1, 0, 0)
 )
 ```
 
-Now that we have defined our contrasts, let's store them within a contrasts table. Create the `btwn_fx` object, then call the `contrast()` function from the emmeans package, setting `emms` in the "object" argument and `between_contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+Let's now generate and store statistical tests of each of our chosen contrasts. To do so, create `btwn_fx` and call `emmeans::contrast()`. Place `emms` in the "Object" argument, `between_contrasts` in the "Interaction" argument, and enact a Scheffé adjustment. Displayed below is a curated table with only the correct output generated by `emmeans::contrast()`.
 
 ```{r, between_fx}
 btwn_fx <- contrast(emms, between_contrasts, adjust = "scheffe")
 ```
-``` {r, kable_btwn, echo = FALSE}
-btwn_display <- as.data.frame(btwn_fx)
-
-btwn_display |> 
-  select(contrast:df) |> 
+```{r, btwnfx_hidden, echo = FALSE}
+btwn_fx |> 
+  as.data.frame() |> 
+  select(contrast:df)
   knitr::kable(digits = 3)
 ```
 
@@ -133,17 +143,21 @@ btwn_display |>
 
 From the above output, the following conclusions may be drawn:
 
-- That significant differences exist in the "Fatigue - Alert", "Extreme - Mod, Mild", and "Low - High" contrasts (p \< .05). Fatigued participants make more driving errors than Alert participants, participants with Extreme fatigue make more driving errors than the average of participants with Mild and Moderate fatigue, and participants with High fatigue (the average of Extreme and Moderate) make more driving errors than those with Low fatigue (the average of Mild and Alert).
+- Significant differences exist in the "Fatigue - Alert", "Extreme - Mod, Mild", and "Low - High" contrasts (p \< .05). Fatigued participants make more driving errors than Alert participants, participants with Extreme fatigue make more driving errors than the average of participants with Mild and Moderate fatigue, and participants with High fatigue (the average of Extreme and Moderate) make more driving errors than those with Low fatigue (the average of Mild and Alert).
 
-- There is insufficient evidence to suggest a significant difference exists between participants with Mild fatigue and participants with no fatigue.
+- There is insufficient evidence to suggest a significant difference exists between participants with Mild fatigue and participants with no fatigue (p > .05)
 
-Such analysis establishes that significant effects exist in our chosen contrasts, but does not allow for specific insight into the magnitude of said effects. An approach utilising SCIs can remedy this. To achieve this with PsyR, let's create an object `contrasts_w_cis` using the `psyci()` function, specifying the following:
+Such analysis establishes that significant effects exist in our chosen contrasts, but does not allow for specific insight into the magnitude of said effects. An approach utilising SCIs can remedy this, and can be justified as follows:
+
+- The creation of SCIs goes beyond a traditional hypothesis testing approach of determining the significance of a set of contrasts. Where hypothesis testing allows one to determine whether to reject the null hypothesis, SCIs provide additional information regarding the directionality and magnitude of the effects at test (while maintaining a FWER \< ⍺). Such a method is compatible with an initial ANOVA-F test.
+
+To generate SCIs with PsyR, let's use the `psyci()` function and specify the following:
 
 - The model is the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
 
 - The contrast_tables argument is set as the previously made `btwn_fx` object. Of note, if one has multiple contrast tables this argument can also take in a list.
 
-- The method is set as "ph", creating confidence intervals (estimate ± SE · cc) using a post-hoc method [@bird2002a].
+- The method is set as "ph", creating confidence intervals (estimate ± SE · cc) using a post-hoc method [@bird2002].
 
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
@@ -154,13 +168,14 @@ contrasts_w_cis <- psyci(
   method = "ph"
 )
 ```
+
 ```{r, kable_output, echo = FALSE}
 knitr::kable(contrasts_w_cis, digits = 3)
 ```
 
 ## The Contribution of the Scheffé SCI Method
 
-In creating SCIs, we gain insight into the results which exceeds that of a traditional ANOVA contrast approach. An updated interpretation may look as follows.
+In creating SCIs, we gain insight into the results which exceeds that of a traditional approach using only hypothesis testing. An updated interpretation may look as follows.
 
 There is evidence of significant differences in the "Fatigue - Alert", "Extreme - Mod, Mild", and "Low - High" contrasts (p \< .05). Specifically:
 
@@ -172,7 +187,7 @@ There is evidence of significant differences in the "Fatigue - Alert", "Extreme 
 
 There is insufficient evidence to suggest a significant difference exists in the "Alert - Mild" contrast (p \> 0.05).
 
-- Alert drivers may make 5.825 fewer or 1.825 more mistakes than their Mildly fatigued counterparts.
+- Alert drivers may make 5.825 fewer or 1.825 more driving errors than their Mildly fatigued counterparts.
 
 Such specificity is especially useful if thresholds of importance are introduced. For example, imagine that following new government guidelines, the researcher was only interested in interventions that resulted in a difference of **3 driving errors**. The addition of this stipulation once again alters our analysis. For example:
 
@@ -180,7 +195,7 @@ Such specificity is especially useful if thresholds of importance are introduced
 
 - Alert drivers may make 5.825 fewer or 1.825 more mistakes than their Mildly fatigued counterparts. Thus, while no significant effect has been detected, it can be said with 95% confidence that Alert drivers may make an important amount fewer mistakes than Mildly fatigued drivers (5.825 \> 3), but do not make an important amount more mistakes than Mildly fatigued drivers (1.825 \< 3).
 
-Finally, in lieu of specific values, thresholds of importance may be defined according to standardised units using guidelines such as Cohen's *d* to determine importance [@cohen2013]. To do so, divide raw limits by the within-group standard deviation (the square root of the within-group mean square error). While not shown in this vignette, `psyci()` automatically produces a second output scaled in standard units.
+Finally, in lieu of specific values, thresholds of importance may be defined according to standardised units using guidelines such as Cohen's *d* to determine importance [@cohen2013]. While not shown in this vignette, `psyci()` automatically produces a second output scaled in standard units. This scaling is generated by dividing the raw output by the within-group standard deviation (the square root of the within-group mean square error).
 
 ------------------------------------------------------------------------
 
