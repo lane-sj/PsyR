@@ -38,7 +38,7 @@ To learn more about the `drive_sleepy` dataframe, call the help function using `
 ?drive_sleepy
 ```
 
-Also, let's tidy up the data, labeling the levels of our independent variable for greater clarity.
+Also, let's tidy up the data, labelling the levels of our independent variable for greater clarity.
 
 ```{r longform}
 drive_sleepy <- drive_sleepy %>%
