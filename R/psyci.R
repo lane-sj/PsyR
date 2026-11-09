@@ -84,15 +84,25 @@
 #'   repeated-measure cells involved in each contrast. The latter is available
 #'   only for pairwise within-subject contrasts with `method = "ind"` or
 #'   `method = "bf"`. The default is `"bird"`.
-#' @return A list of `emmeans` contrast tables with confidence intervals added.
-#'   Each table retains the original `emmeans` `p.value` column and adds
-#'   `psyr_p_value`, the contrast-specific p-value computed from the same PsyR
-#'   reference distribution as its confidence interval. The table's
-#'   `psyr_p_value_method` attribute records the method used for the PsyR
-#'   p-values. Non-contrast rows are removed before correction. The attributes
+#' @param legacy_anova A non-missing logical value. When `TRUE`, calculate and
+#'   print a Psy-style analysis-of-variance summary table containing the SS,
+#'   df, MS, and F statistic for each supplied contrast and its applicable
+#'   error row. The table is attached to the result as `legacy_anova_table`.
+#'   The default is `FALSE`.
+#' @return A list of PsyR contrast tables with confidence intervals added.
+#'   Each table reports `df_num = 1`, `df_error`, the ordinary observed Psy
+#'   `F_value`, its unadjusted `F(1, df_error)` upper-tail `p_value`, the
+#'   procedure-specific `p_value_adjusted`, and an explicit `p_adjustment`
+#'   label. Roy GCR tables additionally report `theta`, calculated as
+#'   `F_value / (df_error + F_value)` for entry into Psy's GCR probability
+#'   calculator. The original `emmeans` `t.ratio` and `p.value` columns are removed.
+#'   Non-contrast rows are removed before correction. The attributes
 #'   `psyr_dropped_noncontrasts`, `psyr_orthogonality`, and
 #'   `psyr_family_group` and `psyr_family_size` record filtering and
-#'   grouping diagnostics, while
+#'   grouping diagnostics. For Roy GCR output,
+#'   `psyr_probability_parameters` contains Psy's `s`, `m`, and `n`; for SMR
+#'   output, it contains row-specific `k = sqrt(F_value)` together with Psy's
+#'   `p`, `q`, and `df` (PsyR's error degrees of freedom). The
 #'   `mesg` contains corresponding human-readable messages. Printing the result
 #'   shows the raw tables followed by tables in sample standard-deviation units,
 #'   following the original Psy program. The scaled tables are also available
@@ -100,7 +110,10 @@
 #'   SDs from its `scale_info` attribute. With
 #'   `standardized_ci = "algina_keselman"`, each scaled table additionally
 #'   reports its contrast-specific `scale`, `ncp`, `ncp_lower`, and `ncp_upper`
-#'   values. Existing list indexing continues to return the raw tables.
+#'   values. Existing list indexing continues to return the raw tables. When
+#'   `legacy_anova = TRUE`, the supplied-contrast ANOVA table is available as
+#'   `attr(result, "legacy_anova_table")` and is printed once before the raw and
+#'   scaled confidence-interval tables.
 #' @export
 #'
 #' @examples
@@ -128,7 +141,8 @@ psyci <- function(model, contrast_tables, method,
                   seed = NULL,
                   family_check = c("error", "warn", "none"),
                   family_check_tol = sqrt(.Machine$double.eps),
-                  standardized_ci = c("bird", "algina_keselman")){
+                  standardized_ci = c("bird", "algina_keselman"),
+                  legacy_anova = FALSE){
 
   if(!inherits(model, "afex_aov")){
     stop("Error: model needs to be of class afex_aov")
@@ -137,6 +151,10 @@ psyci <- function(model, contrast_tables, method,
     stop("Error: method should be ind, bf, ph, or smr")
   }
   .validate_alpha(alpha)
+  if (!is.logical(legacy_anova) || length(legacy_anova) != 1L ||
+      is.na(legacy_anova)) {
+    stop("`legacy_anova` must be one non-missing logical value.", call. = FALSE)
+  }
   standardized_ci <- match.arg(standardized_ci)
   if (standardized_ci == "algina_keselman" &&
       !method %in% c("ind", "bf")) {
@@ -236,6 +254,14 @@ psyci <- function(model, contrast_tables, method,
     tol = family_check_tol
   )
   contrast_tables <- contrast_preparation$tables
+  legacy_statistics <- .psyci_legacy_statistics(
+    model = model,
+    contrast_tables = contrast_tables,
+    extractions = contrast_preparation$extractions,
+    families = family_list,
+    roles = family_report$roles,
+    tol = family_check_tol
+  )
   correction_groups <- if (method == "bf") {
     if (!is.null(family_group)) {
       family_group
@@ -393,22 +419,8 @@ psyci <- function(model, contrast_tables, method,
    smr_params = NULL
   }
 
-  # now put the contrast table info together
-  contrast_info <- do.call(rbind, contrast_tables)
-  all_contrast_tables <- summary(contrast_info) # create one big contrast table that one can index easily
-  contrast_tables <- contrast_tables # keeping list
-  # get the error df
-  # Non-estimable rows have missing degrees of freedom. They should receive
-  # missing intervals and p-values without preventing estimable rows in the
-  # same table from being processed.
-  v_e = unique(all_contrast_tables$df[!is.na(all_contrast_tables$df)])
-
-  if (length(v_e) == 0){
-    stop("Error: no estimable contrasts with an error df were provided")
-  }
-  if (length(v_e) > 1){
-    stop("Error: more than one contrast analysis passed in")
-  }
+  # Psy uses one error degree of freedom, N - G, across every contrast row.
+  v_e <- legacy_statistics$dfe
 
   if (method %in% "smr") {
     smr_params <- .validate_smr_p_value_params(smr_params, v_e)
@@ -525,48 +537,57 @@ psyci <- function(model, contrast_tables, method,
   # cc, and save results to a concatenated summary table
   contrasts_w_cis <- mapply(get_cis, contrast_tables, critical_constant, SIMPLIFY=FALSE)
 
-  # Add the PsyR-compatible p-value without replacing the original emmeans
-  # p.value column. For SMR, reuse the distribution fitted above.
+  # Add the ordinary observed Psy F statistic, its ordinary F(1, df_error)
+  # probability, and the probability from the selected simultaneous-inference
+  # procedure. For SMR, reuse the distribution fitted above.
   p_value_nk <- if (method %in% "bf") {
     as.list(nk)
   } else {
     rep(list(NULL), length(contrast_tables))
   }
   contrasts_w_cis <- Map(
-    function(contrast_table, family, n_k, v_b, v_w) {
-      if (method %in% "smr") {
-        statistic <- (contrast_table$estimate / contrast_table$SE)^2
-        p_value <- .smr_reference_p_value(statistic, smr_distribution)
-        if (any(!is.na(statistic) & !is.finite(p_value))) {
-          stop(
-            paste(
-              "The SMR reference distribution produced a non-finite",
-              "p-value for the supplied contrasts."
-            ),
-            call. = FALSE
-          )
-        }
-        p_value <- pmin(1, pmax(0, p_value))
-      } else {
-        p_value <- compute_contrast_p_value(
-          estimate = contrast_table$estimate,
-          se_contrast = contrast_table$SE,
-          method = method,
-          v_e = v_e,
-          family = if (method %in% "ph") family else NULL,
-          n_k = if (method %in% "bf") n_k else NULL,
-          v_b = if (
-            method %in% "ph" && family %in% c("b", "bw")
-          ) v_b else NULL,
-          v_w = if (
-            method %in% "ph" && family %in% c("w", "bw")
-          ) v_w else NULL
+    function(contrast_table, f_value, family, n_k, v_b, v_w) {
+      contrast_table[["df"]] <- rep(v_e, nrow(contrast_table))
+      contrast_table[["df_num"]] <- rep(1L, nrow(contrast_table))
+      contrast_table[["F_value"]] <- unname(f_value)
+      if (method == "ph" && family == "bw") {
+        contrast_table[["theta"]] <- unname(
+          .compute_gcr_theta(f_value, v_e)
         )
       }
-      contrast_table[["psyr_p_value"]] <- unname(p_value)
+      contrast_table[["p_value"]] <- unname(
+        .compute_unadjusted_contrast_p_value(
+          F_value = f_value,
+          df_error = v_e
+        )
+      )
+      p_value_adjusted <- .compute_contrast_p_value_from_f(
+        statistic = f_value,
+        method = method,
+        v_e = v_e,
+        family = if (method %in% "ph") family else NULL,
+        n_k = if (method %in% "bf") n_k else NULL,
+        v_b = if (
+          method %in% "ph" && family %in% c("b", "bw")
+        ) v_b else NULL,
+        v_w = if (
+          method %in% "ph" && family %in% c("w", "bw")
+        ) v_w else NULL,
+        smr_distribution = if (method %in% "smr") {
+          smr_distribution
+        } else {
+          NULL
+        }
+      )
+      contrast_table[["p_value_adjusted"]] <- unname(p_value_adjusted)
+      contrast_table[["p_adjustment"]] <- rep(
+        .psyci_adjustment_label(method, family),
+        nrow(contrast_table)
+      )
       contrast_table
     },
     contrasts_w_cis,
+    legacy_statistics$f_values,
     family_list,
     p_value_nk,
     v_bs,
@@ -616,6 +637,8 @@ psyci <- function(model, contrast_tables, method,
     diagnostic_family_sizes
   )
 
+  contrasts_w_cis <- lapply(contrasts_w_cis, .finalize_psyci_table)
+
   names(contrasts_w_cis) = unlist(families, use.names = FALSE)
 
   standardized_adjustments <- if (method == "bf") {
@@ -623,7 +646,7 @@ psyci <- function(model, contrast_tables, method,
   } else {
     rep(list(1L), length(contrasts_w_cis))
   }
-  .new_psyci_result(
+  result <- .new_psyci_result(
     contrasts_w_cis,
     model,
     standardized_ci = standardized_ci,
@@ -631,4 +654,8 @@ psyci <- function(model, contrast_tables, method,
     alphas = alphas,
     adjustments = standardized_adjustments
   )
+  if (legacy_anova) {
+    attr(result, "legacy_anova_table") <- legacy_statistics$table
+  }
+  result
 }

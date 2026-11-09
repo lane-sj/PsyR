@@ -129,7 +129,14 @@ knitr::kable(cnt_res, digits = 3)
 
 ### The (Initial) Interpretation
 
-The above analysis outputs two p-values, with most of them indicating a failure to reject the null hypothesis. Of note, the "Post - Pre" contrast seems significant according to the p-value from emmeans but does not meet the criteria for significance according to the p-value from PsyR. Here, clarity may be achieved by examining our CIs, where lower and upper bounds which are either both positive or both negative are indicative of a significant result. Further, CIs let us understand the magnitude of the effects represented by our contrasts. To generate our CIs with PsyR, let's create an object `contrasts_w_cis` using the `psyci()` function, specifying the following:
+The emmeans table above reports its own contrast tests. PsyR's table below
+instead makes the two relevant probabilities explicit: `p_value` is the
+ordinary upper-tail probability for the displayed `F_value`, while
+`p_value_adjusted` uses the Hotelling T-squared procedure named in
+`p_adjustment` and is commensurate with the simultaneous confidence interval.
+Confidence limits that are both positive or both negative indicate rejection
+under that procedure and also describe the direction and magnitude of the
+effect. To generate these results, call `psyci()` with the following:
 
 - The model is the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
 

@@ -125,11 +125,6 @@ smr_results <- local({
         nvh_simple_effects = nvh_simple_table,
         sleep_deprivation_simple_effects = sleep_simple_table
     )
-    original_p_values <- lapply(
-        contrast_tables,
-        function(table) as.data.frame(summary(table))$p.value
-    )
-
     alpha <- 0.05
     smr_seed <- 42L
     smr_parameters <- list(
@@ -149,47 +144,71 @@ smr_results <- local({
         alpha = alpha
     )
 
-    expected_method <- "Studentized Maximum Root (SMR)"
+    expected_method <- "SMR"
     for (index in seq_along(results)) {
         table <- results[[index]]
-        available_p_values <- !is.na(table$psyr_p_value)
+        available_p_values <- !is.na(table$p_value_adjusted)
         comparable <- stats::complete.cases(
-            table$psyr_p_value,
+            table$p_value_adjusted,
             table$lower,
             table$upper
         )
 
         stopifnot(
-            "p.value" %in% names(table),
-            "psyr_p_value" %in% names(table),
+            all(c(
+                "df_num", "df_error", "F_value", "p_value",
+                "p_value_adjusted", "p_adjustment"
+            ) %in% names(table)),
+            !any(c("df", "t.ratio", "p.value") %in% names(table)),
+            all(table$df_num == 1L),
             isTRUE(all.equal(
-                table$p.value,
-                original_p_values[[index]],
-                check.attributes = FALSE
+                table$p_value,
+                stats::pf(
+                    table$F_value, 1, table$df_error,
+                    lower.tail = FALSE
+                )
             )),
-            all(is.finite(table$psyr_p_value[available_p_values])),
-            all(table$psyr_p_value[available_p_values] >= 0),
-            all(table$psyr_p_value[available_p_values] <= 1),
-            identical(
-                attr(table, "psyr_p_value_method"),
-                expected_method
-            ),
-            any(startsWith(
+            all(is.finite(table$p_value_adjusted[available_p_values])),
+            all(table$p_value_adjusted[available_p_values] >= 0),
+            all(table$p_value_adjusted[available_p_values] <= 1),
+            all(table$p_adjustment == expected_method),
+            any(grepl(
+                "PsyR simultaneous-inference procedure:",
                 attr(table, "mesg"),
-                "PsyR p-value method:"
+                fixed = TRUE
             )),
             all(
-                (table$psyr_p_value[comparable] <= alpha) ==
+                (table$p_value_adjusted[comparable] <= alpha) ==
                     (table$lower[comparable] > 0 |
                         table$upper[comparable] < 0)
-            )
+            ),
+            identical(
+                names(attr(table, "psyr_probability_parameters")),
+                c("k", "p", "q", "df")
+            ),
+            isTRUE(all.equal(
+                attr(table, "psyr_probability_parameters")$k,
+                sqrt(table$F_value)
+            )),
+            identical(
+                attr(table, "psyr_probability_parameters")$p,
+                smr_parameters$p
+            ),
+            identical(
+                attr(table, "psyr_probability_parameters")$q,
+                smr_parameters$q
+            ),
+            isTRUE(all.equal(
+                attr(table, "psyr_probability_parameters")$df,
+                unique(table$df_error)
+            ))
         )
 
         cat(
             "\nTable ",
             index,
             " — ",
-            attr(table, "psyr_p_value_method"),
+            unique(table$p_adjustment),
             "\n",
             sep = ""
         )

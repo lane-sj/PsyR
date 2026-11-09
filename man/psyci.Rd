@@ -19,7 +19,8 @@ psyci(
   seed = NULL,
   family_check = c("error", "warn", "none"),
   family_check_tol = sqrt(.Machine$double.eps),
-  standardized_ci = c("bird", "algina_keselman")
+  standardized_ci = c("bird", "algina_keselman"),
+  legacy_anova = FALSE
 )
 }
 \arguments{
@@ -110,17 +111,28 @@ Algina and Keselman (2003), with a separate scaling divisor based on the
 repeated-measure cells involved in each contrast. The latter is available
 only for pairwise within-subject contrasts with \code{method = "ind"} or
 \code{method = "bf"}. The default is \code{"bird"}.}
+
+\item{legacy_anova}{A non-missing logical value. When \code{TRUE}, calculate and
+print a Psy-style analysis-of-variance summary table containing the SS,
+df, MS, and F statistic for each supplied contrast and its applicable
+error row. The table is attached to the result as \code{legacy_anova_table}.
+The default is \code{FALSE}.}
 }
 \value{
-A list of \code{emmeans} contrast tables with confidence intervals added.
-Each table retains the original \code{emmeans} \code{p.value} column and adds
-\code{psyr_p_value}, the contrast-specific p-value computed from the same PsyR
-reference distribution as its confidence interval. The table's
-\code{psyr_p_value_method} attribute records the method used for the PsyR
-p-values. Non-contrast rows are removed before correction. The attributes
+A list of PsyR contrast tables with confidence intervals added.
+Each table reports \code{df_num = 1}, \code{df_error}, the ordinary observed Psy
+\code{F_value}, its unadjusted \code{F(1, df_error)} upper-tail \code{p_value}, the
+procedure-specific \code{p_value_adjusted}, and an explicit \code{p_adjustment}
+label. Roy GCR tables additionally report \code{theta}, calculated as
+\code{F_value / (df_error + F_value)} for entry into Psy's GCR probability
+calculator. The original \code{emmeans} \code{t.ratio} and \code{p.value} columns are removed.
+Non-contrast rows are removed before correction. The attributes
 \code{psyr_dropped_noncontrasts}, \code{psyr_orthogonality}, and
 \code{psyr_family_group} and \code{psyr_family_size} record filtering and
-grouping diagnostics, while
+grouping diagnostics. For Roy GCR output,
+\code{psyr_probability_parameters} contains Psy's \code{s}, \code{m}, and \code{n}; for SMR
+output, it contains row-specific \code{k = sqrt(F_value)} together with Psy's
+\code{p}, \code{q}, and \code{df} (PsyR's error degrees of freedom). The
 \code{mesg} contains corresponding human-readable messages. Printing the result
 shows the raw tables followed by tables in sample standard-deviation units,
 following the original Psy program. The scaled tables are also available
@@ -128,7 +140,10 @@ from the result's \code{scaled_tables} attribute, and the divisor and component
 SDs from its \code{scale_info} attribute. With
 \code{standardized_ci = "algina_keselman"}, each scaled table additionally
 reports its contrast-specific \code{scale}, \code{ncp}, \code{ncp_lower}, and \code{ncp_upper}
-values. Existing list indexing continues to return the raw tables.
+values. Existing list indexing continues to return the raw tables. When
+\code{legacy_anova = TRUE}, the supplied-contrast ANOVA table is available as
+\code{attr(result, "legacy_anova_table")} and is printed once before the raw and
+scaled confidence-interval tables.
 }
 \description{
 This function computes confidence intervals for contrasts testing effects

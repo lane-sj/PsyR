@@ -17,6 +17,12 @@ flatten_psyr <- function(result) {
         table$.table <- i
         table
     })
+    columns <- unique(unlist(lapply(tables, names), use.names = FALSE))
+    tables <- lapply(tables, function(table) {
+        missing <- setdiff(columns, names(table))
+        table[missing] <- NA
+        table[columns]
+    })
     do.call(rbind, tables)
 }
 
@@ -41,7 +47,7 @@ compare_result <- function(analysis, psyr, legacy, note = "") {
         psyr_SE = psyr$SE,
         SE_difference = psyr$SE - legacy$SE,
         legacy_df = legacy$df,
-        psyr_df = psyr$df,
+        psyr_df = psyr$df_error,
         legacy_cc = legacy$cc,
         psyr_cc = psyr$cc,
         cc_difference = psyr$cc - legacy$cc,

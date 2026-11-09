@@ -288,9 +288,8 @@
     if (!is.na(correction_group) && !is.na(family_size)) {
         messages <- c(messages, sprintf(
             paste0(
-                "PsyR Bonferroni confidence intervals and `psyr_p_value` use ",
-                "family_group '%s', containing %d genuine contrast(s); ",
-                "`p.value` retains the original emmeans result."
+                "PsyR Bonferroni confidence intervals and `p_value_adjusted` use ",
+                "family_group '%s', containing %d genuine contrast(s)."
             ),
             correction_group, family_size
         ))

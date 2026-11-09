@@ -8,7 +8,6 @@ inst/doc
 .positai
 references/*
 references
-AGENTS.md
 scripts/*
 !scripts/example-rescale-contrasts.R
 !scripts/example-psyci-post-hoc-mixed.R
@@ -24,4 +23,3 @@ scripts/*
 !scripts/compare-vignettes-with-original-psy.R
 PSY-source_no-touchy/
 *.md
-!AGENTS.md
