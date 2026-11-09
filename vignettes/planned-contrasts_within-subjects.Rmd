@@ -8,7 +8,7 @@ vignette: >
 bibliography: references.bib
 ---
 
-A vignette to demonstrate how to conduct a planned contrasts analysis of single factor within-subjects designs using a multivariate model [@bird2002]. Specifically, this vignette highlights how one may use PsyR to create Simultaneous Confidence Intervals (SCIs) which allow a researcher to understand the magnitude of an effect. A multivariate model is appropriate and necessary for a within-subjects design; within-subjects data necessarily violates assumptions of sphericity, and a multivariate model addresses this through producing separate error terms for each contrast.
+A vignette to demonstrate how to conduct a planned contrasts analysis of a single factor within-subjects design using a multivariate model [@bird2002]. Specifically, this vignette highlights how one may use PsyR to create Simultaneous Confidence Intervals (SCIs) which allow a researcher to understand the magnitude of an effect. A multivariate model is appropriate and necessary for a design with within-subjects data. This is because within-subjects data necessarily violates assumptions of sphericity. A multivariate model addresses this through producing separate error terms for each contrast.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -30,7 +30,7 @@ library(tidyverse)
 
 ## The Data
 
-The `priming` dataframe contains the results of a lexical decision task used to investigate automatic activation of stereotypes through priming. *N* = 15 participants were subliminally primed with a social category label (e.g., "unemployed" or "elderly") before responding to target words. The target words are either stereotypical attributes, atypical attributes, or neutral words, such that there are 3 levels of the independent variable (*p* = 3). The dependent variable is reaction time (in tenths of a second), where a faster reaction time indicates a greater priming effect.
+The `priming` dataframe contains the results of a lexical decision-making task used to investigate automatic activation of stereotypes through priming. *N* = 15 participants were subliminally primed with a social category label (e.g., "unemployed" or "elderly") before responding to target words. The target words are either stereotypical attributes, atypical attributes, or neutral words, such that there are *p* = 3 levels of the independent variable. The dependent variable is reaction time (in tenths of a second), where a faster reaction time is indicative of a greater priming effect.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -45,7 +45,7 @@ To learn more about the `priming` dataframe, call the help function using `?df`.
 ?priming
 ```
 
-Also, let's tidy up the data, labelling the levels of our independent variables for greater clarity.
+Also, for our convenience, let's change our independent variable and subject columns to the `factor` data type.
 
 ```{r sortexp}
 priming <- priming %>%
@@ -55,7 +55,7 @@ priming <- priming %>%
   )
 ```
 
-Next, let's visualise our data. Doing so allows us to more intuitively understand its layout.
+Next, let's visualise our data. Doing so allows one to more intuitively understand its layout.
 
 ```{r plotdata, fig.width = 7, fig.height = 4}
 priming %>% 
@@ -67,11 +67,9 @@ priming %>%
 
 ## The Analysis
 
-Let's prepare to run some statistical tests!
+Here we will create the necessary building blocks needed by PsyR to generate our SCIs. First, we must generate a multivariate ANOVA model of our data. To do so, call `afex::afex_options()` to specify that we want a multivariate analysis. Next, create a new object `mod` by calling `afex::aov_ez()`. `mod` will take in the `Subject` column to identify subjects, the `ReactionTime` column as the dependent variable, the `priming` dataframe, and the `Prime` column set as within-subjects. 
 
-Here we will create the building blocks for first an ANOVA output, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `ReactionTime` column as the dependent variable, the `priming` dataframe, and the `Prime` column set as within-subjects. Finally, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Prime`. Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Running this code will give us the cell means for the dependent variable (Reaction Time) at each level of the independent variable (Prime Type).
-
-Next, let's generate and store cell means pertaining to the cross-over of each level of each factor. To do so, create `emms` and call `emmeans::emmeans()`. Place the ANOVA model `mod` in the "Object" argument and a vector containing our independent variables in the "Specs" argument. 
+Next, let's generate and store group means for each level of the `Prime` within-subjects factor. To do so, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` and output based upon `Prime`. Note that the generation and storage of this ANOVA model in this specific manner is essential for downstream compatibility with functions in the `emmeans` package, and for eventual generation of SCIs with PsyR.
 
 ```{r, aov, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
@@ -94,7 +92,7 @@ emms |>
 
 Time to define our contrasts!
 
-To do so, it is important to look at the stated aims of the research and the hypothesised pattern of sample means in the data. In this example, the following contrasts are chosen for analysis:
+Given this is a planned analysis, contrasts must be defined prior to data collection. In this example, the following contrasts were chosen for analysis:
 
 - "Stereo - Others" ➞ The difference between the average of reaction times after either Atypical or Neutral primes versus after Stereotypical primes.
 
@@ -107,7 +105,7 @@ experience_contrasts = list(
 )
 ```
 
-Now that we have defined our contrasts, let's store them within a contrasts table. Create the `wthn_fx` object, then call the `emmeans::contrast()` function from the emmeans package, setting `emms` in the "object" argument and `experience_contrasts` in the "method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+Let's now obtain relevant statistical output pertaining to each of our chosen contrasts. To do so, create the `wthn_fx` object, then call `emmeans::contrast()`, setting `emms` in the "Object" argument and `experience_contrasts` in the "Method" argument.
 
 ```{r, compute_contrasts}
 wthn_fx <- contrast(emms, experience_contrasts)
@@ -131,19 +129,21 @@ Finally, let's call `psyci()` to generate our SCIs. Within `psyci()`, specify th
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
 ```{r, get_cis}
-psyci(
+output <- psyci(
   model = mod, 
   contrast_tables = wthn_fx, 
   method = "bf"
-) %>%
-  knitr::kable(digits = 3)
+)
+```
+``` {r, get_cis_hidden}
+  knitr::kable(output, digits = 3)
 ```
 
 ## The Interpretation
 
-One interpretation of our analysis may be as follows. Being primed with a stereotypical word, as opposed to either an atypical or neutral word, results in a significantly faster reaction time (-2.093, -4.907). Further, there is insufficient evidence to suggest a difference exists between priming using an atypical versus a neutral word (-1.323, 3.323).
+One interpretation of our analysis may be as follows. Being primed with a stereotypical word, as opposed to either an atypical or neutral word, results in between 2.093 and 4.907 tenths of a second faster reaction time. However, there is insufficient evidence to suggest a difference in reaction time exists after priming using an atypical versus a neutral word (-1.323, 3.323).
 
-SCIs are also useful if thresholds of importance are introduced. Imagine that a researcher was only interested in a difference of mean reaction times of **at least three tenths of a second**. This stipulation changes our analysis. For example, being primed with a stereotypical word (as opposed to either an atypical or neutral word) results in significantly faster reaction times. However, this may or may not be of importance (as the lower bound 2.093 \< 3). Further, there is insufficient evidence to suggest a difference exists between priming with an atypical versus a neutral word. Examination of the SCI (-1.323, 3.323) reveals that while reaction time differences between an atypical prime may or may not be of importance as compared to reaction time to a neutral prime (3.323 \> 3), a reaction time to a neutral prime is not of importance as compared to an atypical prime (as \|-1.323\| \< 3).
+SCIs are also useful if thresholds of importance are introduced. Imagine that a researcher was only interested in a difference of mean reaction times of **at least three tenths of a second**. This stipulation changes our analysis. For example, being primed with a stereotypical word (as opposed to either an atypical or neutral word) results in significantly faster reaction times. However, this may or may not be of importance (as the lower bound 2.093 \< 3). Further, there is insufficient evidence to suggest a difference exists between priming with an atypical versus a neutral word. Examination of the SCI (-1.323, 3.323) reveals that while reaction time differences between an atypical prime may or may not be of importance as compared to reaction time to a neutral prime (as 3.323 \> 3), a reaction time to a neutral prime is not of importance as compared to an atypical prime (as \|-1.323\| \< 3).
 
 ------------------------------------------------------------------------
 
