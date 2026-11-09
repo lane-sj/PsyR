@@ -90,15 +90,19 @@
 #'   error row. The table is attached to the result as `legacy_anova_table`.
 #'   The default is `FALSE`.
 #' @return A list of PsyR contrast tables with confidence intervals added.
-#'   Each table reports `df_error`, the ordinary one-degree-of-freedom Psy
-#'   `F_value`, and `psyr_p_value`, the contrast-specific p-value computed from
-#'   the selected PsyR reference distribution. The original `emmeans`
-#'   `t.ratio` and `p.value` columns are removed. The table's
-#'   `psyr_p_value_method` attribute records the method used for the PsyR
-#'   p-values. Non-contrast rows are removed before correction. The attributes
+#'   Each table reports `df_num = 1`, `df_error`, the ordinary observed Psy
+#'   `F_value`, its unadjusted `F(1, df_error)` upper-tail `p_value`, the
+#'   procedure-specific `p_value_adjusted`, and an explicit `p_adjustment`
+#'   label. Roy GCR tables additionally report `theta`, calculated as
+#'   `F_value / (df_error + F_value)` for entry into Psy's GCR probability
+#'   calculator. The original `emmeans` `t.ratio` and `p.value` columns are removed.
+#'   Non-contrast rows are removed before correction. The attributes
 #'   `psyr_dropped_noncontrasts`, `psyr_orthogonality`, and
 #'   `psyr_family_group` and `psyr_family_size` record filtering and
-#'   grouping diagnostics, while
+#'   grouping diagnostics. For Roy GCR output,
+#'   `psyr_probability_parameters` contains Psy's `s`, `m`, and `n`; for SMR
+#'   output, it contains row-specific `k = sqrt(F_value)` together with Psy's
+#'   `p`, `q`, and `df` (PsyR's error degrees of freedom). The
 #'   `mesg` contains corresponding human-readable messages. Printing the result
 #'   shows the raw tables followed by tables in sample standard-deviation units,
 #'   following the original Psy program. The scaled tables are also available
@@ -533,9 +537,9 @@ psyci <- function(model, contrast_tables, method,
   # cc, and save results to a concatenated summary table
   contrasts_w_cis <- mapply(get_cis, contrast_tables, critical_constant, SIMPLIFY=FALSE)
 
-  # Add the observed Psy F statistic and evaluate that same statistic against
-  # the selected reference distribution. For SMR, reuse the distribution
-  # fitted above.
+  # Add the ordinary observed Psy F statistic, its ordinary F(1, df_error)
+  # probability, and the probability from the selected simultaneous-inference
+  # procedure. For SMR, reuse the distribution fitted above.
   p_value_nk <- if (method %in% "bf") {
     as.list(nk)
   } else {
@@ -544,8 +548,20 @@ psyci <- function(model, contrast_tables, method,
   contrasts_w_cis <- Map(
     function(contrast_table, f_value, family, n_k, v_b, v_w) {
       contrast_table[["df"]] <- rep(v_e, nrow(contrast_table))
+      contrast_table[["df_num"]] <- rep(1L, nrow(contrast_table))
       contrast_table[["F_value"]] <- unname(f_value)
-      p_value <- .compute_contrast_p_value_from_f(
+      if (method == "ph" && family == "bw") {
+        contrast_table[["theta"]] <- unname(
+          .compute_gcr_theta(f_value, v_e)
+        )
+      }
+      contrast_table[["p_value"]] <- unname(
+        .compute_unadjusted_contrast_p_value(
+          F_value = f_value,
+          df_error = v_e
+        )
+      )
+      p_value_adjusted <- .compute_contrast_p_value_from_f(
         statistic = f_value,
         method = method,
         v_e = v_e,
@@ -563,7 +579,11 @@ psyci <- function(model, contrast_tables, method,
           NULL
         }
       )
-      contrast_table[["psyr_p_value"]] <- unname(p_value)
+      contrast_table[["p_value_adjusted"]] <- unname(p_value_adjusted)
+      contrast_table[["p_adjustment"]] <- rep(
+        .psyci_adjustment_label(method, family),
+        nrow(contrast_table)
+      )
       contrast_table
     },
     contrasts_w_cis,

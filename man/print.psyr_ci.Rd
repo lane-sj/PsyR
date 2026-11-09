@@ -21,7 +21,9 @@ sample standard-deviation units. By default, the scaled tables divide the
 estimate, standard error, and confidence limits by the pooled sample SD used
 by the original Psy program. When Algina-Keselman intervals were requested,
 the standardized limits instead come from noncentral-t inversion and the
-scaling divisor is contrast-specific. The \code{df_error}, \code{F_value}, and
-\code{psyr_p_value} columns are unchanged. When a legacy ANOVA table was
+scaling divisor is contrast-specific. The \code{df_num}, \code{df_error}, \code{F_value},
+\code{theta} (when present), \code{p_value}, \code{p_value_adjusted}, and \code{p_adjustment}
+columns are unchanged.
+When a legacy ANOVA table was
 requested, it is printed once before both confidence-interval sections.
 }

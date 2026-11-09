@@ -49,7 +49,8 @@ test_that("psyci scales between-subject results using Psy's pooled sample SD", {
         )
     }
     for (column in c(
-        "df_error", "F_value", "cc", "psyr_p_value"
+        "df_num", "df_error", "F_value", "p_value", "p_value_adjusted",
+        "p_adjustment", "cc"
     )) {
         expect_equal(standardized[[column]], raw[[column]])
     }
@@ -123,5 +124,9 @@ test_that("zero sample variance leaves raw results available", {
     expect_match(output, "Unavailable:", fixed = TRUE)
     expect_s3_class(observed[[1L]], "psyr_contrast_table")
     expect_true(all(is.infinite(observed[[1L]]$F_value)))
-    expect_equal(observed[[1L]]$psyr_p_value, rep(0, nrow(observed[[1L]])))
+    expect_equal(observed[[1L]]$p_value, rep(0, nrow(observed[[1L]])))
+    expect_equal(
+        observed[[1L]]$p_value_adjusted,
+        rep(0, nrow(observed[[1L]]))
+    )
 })

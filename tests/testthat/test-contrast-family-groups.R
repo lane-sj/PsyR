@@ -77,7 +77,8 @@ test_that("family_group pools genuine contrasts after selector rows are dropped"
             v_e = unique(table$df_error),
             n_k = 18
         )
-        expect_equal(table$psyr_p_value, expected_p)
+        expect_equal(table$p_value_adjusted, expected_p)
+        expect_equal(table$p_value_adjusted, pmin(1, 18 * table$p_value))
     }
 
     dropped <- attr(observed[[1L]], "psyr_dropped_noncontrasts")

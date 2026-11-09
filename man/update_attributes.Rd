@@ -44,11 +44,11 @@ procedure. The default is \code{NA}.}
 \item{smr_params}{a list of parameters used for the Studentized Maximum Root method,
 if this methods was used. Must have named elements p and q. default = NULL}
 
-\item{p_value_method}{Optional method code used to compute a
-\code{psyr_p_value} column. When supplied, the friendly method label is added to
-the \code{mesg} attribute and to the machine-readable
-\code{psyr_p_value_method} attribute. Default is \code{NULL} for compatibility with
-direct calls that have not computed PsyR p-values.}
+\item{p_value_method}{Optional method code used to compute
+\code{p_value_adjusted}. When supplied, messages distinguish the ordinary
+\code{F_value} and \code{p_value} from the procedure-specific adjusted probability
+and confidence interval. Default is \code{NULL} for direct calls that have not
+computed PsyR p-values.}
 }
 \value{
 an emmeans contrast table with attributes updated
@@ -56,14 +56,17 @@ an emmeans contrast table with attributes updated
 \description{
 This function adds to the attributes of the contrast table, to let you know
 the methods that have been applied by PsyR to compute confidence intervals
-and, when requested by \code{psyci()}, PsyR-compatible p-values.
+and, when requested by \code{psyci()}, procedure-specific adjusted p-values.
 The added attributes tell you the key parameters that were used. Specifically,
 the method applied, the family of contrasts (if relevant), factors that were
 interpreted as between or within factors (where relevant), degrees of freedom
 (between and within post-hoc dimensions, where relevant), the alpha value
-applied, and the critical constant value. The displayed \code{F_value} always has
-one numerator degree of freedom; individual and Bonferroni procedures do not
-use between or within post-hoc dimensions.
+applied, and the critical constant value. The displayed \code{F_value} and
+\code{p_value} always use an ordinary F distribution with one numerator degree of
+freedom; individual and Bonferroni procedures do not use between or within
+post-hoc dimensions. Roy GCR and SMR tables also receive a
+\code{psyr_probability_parameters} attribute using the parameter names from
+Psy's probability calculator.
 }
 \examples{
 data(spacing)

@@ -1,4 +1,4 @@
-test_that("psyci adds individual and Bonferroni p-values", {
+test_that("psyci separates ordinary and adjusted p-values", {
     fixture <- make_between_fixture()
     before <- as.data.frame(summary(fixture$tables[[1L]]))
     v_e <- unique(before$df)
@@ -18,18 +18,17 @@ test_that("psyci adds individual and Bonferroni p-values", {
     )
 
     expect_false(any(c("t.ratio", "p.value", "df") %in% names(individual)))
+    expect_equal(individual$df_num, rep(1L, nrow(before)))
     expect_equal(individual$df_error, before$df)
     expect_equal(individual$F_value, (before$estimate / before$SE)^2)
     expect_identical(individual$contrast, before$contrast)
-    expect_equal(individual$psyr_p_value, expected_individual)
-    expect_true(all(individual$psyr_p_value >= 0 &
-        individual$psyr_p_value <= 1))
-    expect_identical(
-        attr(individual, "psyr_p_value_method"),
-        "independent"
-    )
+    expect_equal(individual$p_value, expected_individual)
+    expect_equal(individual$p_value_adjusted, expected_individual)
+    expect_identical(individual$p_adjustment, rep("none", nrow(before)))
+    expect_true(all(individual$p_value_adjusted >= 0 &
+        individual$p_value_adjusted <= 1))
     expect_true(any(grepl(
-        "PsyR p-value method: independent",
+        "PsyR p-value adjustment: none",
         attr(individual, "mesg"),
         fixed = TRUE
     )))
@@ -50,13 +49,27 @@ test_that("psyci adds individual and Bonferroni p-values", {
     )
 
     expect_equal(bonferroni$F_value, individual$F_value)
-    expect_equal(bonferroni$psyr_p_value, expected_bonferroni)
+    expect_equal(bonferroni$p_value, individual$p_value)
+    expect_equal(bonferroni$p_value_adjusted, expected_bonferroni)
+    expect_equal(
+        bonferroni$p_value_adjusted,
+        pmin(1, nrow(before) * bonferroni$p_value)
+    )
+    comparable <- stats::complete.cases(
+        bonferroni$p_value_adjusted,
+        bonferroni$lower,
+        bonferroni$upper
+    )
     expect_identical(
-        attr(bonferroni, "psyr_p_value_method"),
-        "Bonferroni"
+        bonferroni$p_value_adjusted[comparable] <= 0.05,
+        bonferroni$lower[comparable] > 0 | bonferroni$upper[comparable] < 0
+    )
+    expect_identical(
+        bonferroni$p_adjustment,
+        rep("Bonferroni", nrow(before))
     )
     expect_true(any(grepl(
-        "PsyR p-value method: Bonferroni",
+        "PsyR simultaneous-inference procedure: Bonferroni",
         attr(bonferroni, "mesg"),
         fixed = TRUE
     )))
@@ -71,7 +84,7 @@ test_that("psyci adds individual and Bonferroni p-values", {
         fixed = TRUE
     )))
     expect_true(any(grepl(
-        "numerator df of 1 for the displayed `F_value`",
+        "ordinary F(1, df_error) contrast statistic",
         attr(bonferroni, "mesg"),
         fixed = TRUE
     )))
@@ -80,6 +93,34 @@ test_that("psyci adds individual and Bonferroni p-values", {
         attr(bonferroni, "mesg"),
         fixed = TRUE
     )))
+    expect_false("psyr_p_value" %in% names(bonferroni))
+    expect_false(any(grepl(
+        "adjusted `F_value`|Bonferroni-adjusted F",
+        attr(bonferroni, "mesg"),
+        ignore.case = TRUE
+    )))
+})
+
+test_that("Bonferroni probabilities handle one contrast and the unit cap", {
+    statistic <- c(0, 10)
+    raw <- .compute_unadjusted_contrast_p_value(statistic, df_error = 20)
+    one_contrast <- .compute_contrast_p_value_from_f(
+        statistic = statistic,
+        method = "bf",
+        v_e = 20,
+        n_k = 1
+    )
+    four_contrasts <- .compute_contrast_p_value_from_f(
+        statistic = statistic,
+        method = "bf",
+        v_e = 20,
+        n_k = 4
+    )
+
+    expect_equal(one_contrast, raw)
+    expect_equal(four_contrasts, pmin(1, 4 * raw))
+    expect_identical(four_contrasts[[1L]], 1)
+    expect_lt(four_contrasts[[2L]], 1)
 })
 
 test_that("psyci rejects summary tables without coefficient provenance", {
@@ -140,7 +181,16 @@ test_that("psyci uses the pooled Bonferroni family size", {
             observed[[index]]$F_value,
             (before[[index]]$estimate / before[[index]]$SE)^2
         )
-        expect_equal(observed[[index]]$psyr_p_value, expected)
+        expect_equal(
+            observed[[index]]$p_value,
+            stats::pf(
+                observed[[index]]$F_value,
+                df1 = 1,
+                df2 = observed[[index]]$df_error,
+                lower.tail = FALSE
+            )
+        )
+        expect_equal(observed[[index]]$p_value_adjusted, expected)
     }
 })
 
@@ -167,11 +217,7 @@ test_that("psyci maps post-hoc p-values to each contrast family", {
         between_factors = fixture$between_factors,
         within_factors = fixture$within_factors
     )
-    expected_labels <- c(
-        "Scheffe",
-        "post-hoc within (Hotelling's T-squared)",
-        "post-hoc between x within (Roy's GCR)"
-    )
+    expected_labels <- c("Scheffe", "Hotelling T-squared", "Roy GCR")
 
     for (index in seq_along(observed)) {
         family <- fixture$families[[index]]
@@ -189,17 +235,75 @@ test_that("psyci maps post-hoc p-values to each contrast family", {
             observed[[index]]$F_value,
             (before[[index]]$estimate / before[[index]]$SE)^2
         )
-        expect_equal(observed[[index]]$psyr_p_value, expected)
+        expect_equal(
+            observed[[index]]$p_value,
+            stats::pf(
+                observed[[index]]$F_value,
+                df1 = 1,
+                df2 = observed[[index]]$df_error,
+                lower.tail = FALSE
+            )
+        )
+        expect_equal(observed[[index]]$p_value_adjusted, expected)
+        if (family == "bw") {
+            expect_true("theta" %in% names(observed[[index]]))
+            expect_equal(
+                observed[[index]]$theta,
+                observed[[index]]$F_value /
+                    (observed[[index]]$df_error + observed[[index]]$F_value)
+            )
+        } else {
+            expect_false("theta" %in% names(observed[[index]]))
+        }
         expect_identical(
-            attr(observed[[index]], "psyr_p_value_method"),
-            expected_labels[[index]]
+            observed[[index]]$p_adjustment,
+            rep(expected_labels[[index]], nrow(observed[[index]]))
         )
         expect_true(any(grepl(
-            paste0("PsyR p-value method: ", expected_labels[[index]]),
+            paste0(
+                "PsyR simultaneous-inference procedure: ",
+                expected_labels[[index]]
+            ),
             attr(observed[[index]], "mesg"),
             fixed = TRUE
         )))
     }
+
+    expect_null(attr(
+        observed[[1L]],
+        "psyr_probability_parameters",
+        exact = TRUE
+    ))
+    expect_null(attr(
+        observed[[2L]],
+        "psyr_probability_parameters",
+        exact = TRUE
+    ))
+    expect_equal(
+        attr(observed[[3L]], "psyr_probability_parameters"),
+        list(
+            s = min(v_b, v_w),
+            m = (abs(v_b - v_w) - 1) / 2,
+            n = (v_e - v_w - 1) / 2
+        )
+    )
+    expect_true(any(grepl(
+        paste0(
+            "Psy probability-calculator parameters for Roy GCR: s = ",
+            min(v_b, v_w)
+        ),
+        attr(observed[[3L]], "mesg"),
+        fixed = TRUE
+    )))
+    expect_true(any(grepl(
+        "`theta` column contains the value for Psy's GCR field",
+        attr(observed[[3L]], "mesg"),
+        fixed = TRUE
+    )))
+    expect_equal(
+        attr(observed, "scaled_tables")[[3L]]$theta,
+        observed[[3L]]$theta
+    )
 
     between_messages <- attr(observed[[1L]], "mesg")
     within_messages <- attr(observed[[2L]], "mesg")
@@ -284,16 +388,41 @@ test_that("psyci reuses one seeded SMR distribution for CIs and p-values", {
     for (table in observed) {
         expect_equal(table$F_value, (before$estimate / before$SE)^2)
         expect_equal(table$cc, rep(expected_cc, nrow(before)))
-        expect_equal(table$psyr_p_value, expected_p_value)
-        expect_identical(
-            attr(table, "psyr_p_value_method"),
-            "Studentized Maximum Root (SMR)"
+        expect_equal(
+            table$p_value,
+            stats::pf(table$F_value, 1, table$df_error, lower.tail = FALSE)
         )
+        expect_equal(table$p_value_adjusted, expected_p_value)
+        expect_identical(table$p_adjustment, rep("SMR", nrow(table)))
+        probability_parameters <- attr(
+            table,
+            "psyr_probability_parameters"
+        )
+        expect_named(probability_parameters, c("k", "p", "q", "df"))
+        expect_equal(probability_parameters$k, sqrt(table$F_value))
+        expect_identical(probability_parameters$p, smr_params$p)
+        expect_identical(probability_parameters$q, smr_params$q)
+        expect_equal(probability_parameters$df, v_e)
         expect_true(any(grepl(
-            "PsyR p-value method: Studentized Maximum Root (SMR)",
+            "PsyR simultaneous-inference procedure: SMR",
             attr(table, "mesg"),
             fixed = TRUE
         )))
+        expect_true(any(grepl(
+            "row-specific k = sqrt(F_value)",
+            attr(table, "mesg"),
+            fixed = TRUE
+        )))
+    }
+    scaled_tables <- attr(observed, "scaled_tables")
+    for (index in seq_along(observed)) {
+        expect_equal(
+            attr(
+                scaled_tables[[index]],
+                "psyr_probability_parameters"
+            ),
+            attr(observed[[index]], "psyr_probability_parameters")
+        )
     }
 
     observed_with_top_level_seed <- psyci(
@@ -310,5 +439,41 @@ test_that("psyci reuses one seeded SMR distribution for CIs and p-values", {
     expect_identical(sampler_calls, 2L)
     expect_identical(.Random.seed, seed_before)
     expect_equal(observed_with_top_level_seed$cc, rep(expected_cc, nrow(before)))
-    expect_equal(observed_with_top_level_seed$psyr_p_value, expected_p_value)
+    expect_equal(
+        observed_with_top_level_seed$p_value_adjusted,
+        expected_p_value
+    )
+})
+
+test_that("ordinary p-values reproduce the Psy probability calculator", {
+    observed <- .compute_unadjusted_contrast_p_value(
+        F_value = 7.910922,
+        df_error = 87
+    )
+
+    expect_equal(round(observed, 9), 0.006072727)
+})
+
+test_that("Roy GCR theta reproduces the Psy calculator input", {
+    observed <- .compute_gcr_theta(F_value = 7.910922, df_error = 87)
+
+    expect_equal(observed, 7.910922 / (87 + 7.910922))
+    expect_equal(round(observed, 6), 0.083351)
+    expect_identical(.compute_gcr_theta(Inf, 87), 1)
+})
+
+test_that("printed tables label ordinary and adjusted probabilities", {
+    fixture <- make_between_fixture()
+    table <- psyci(fixture$model, fixture$tables, method = "bf")[[1L]]
+    output <- paste(capture.output(print(table)), collapse = "\n")
+
+    expect_match(output, "p_value", fixed = TRUE)
+    expect_match(output, "p_value_adjusted", fixed = TRUE)
+    expect_match(output, "p_adjustment", fixed = TRUE)
+    expect_false(grepl("psyr_p_value", output, fixed = TRUE))
+    expect_match(
+        output,
+        "ordinary F(1, df_error) contrast statistic",
+        fixed = TRUE
+    )
 })

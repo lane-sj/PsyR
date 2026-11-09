@@ -319,8 +319,10 @@
 #' estimate, standard error, and confidence limits by the pooled sample SD used
 #' by the original Psy program. When Algina-Keselman intervals were requested,
 #' the standardized limits instead come from noncentral-t inversion and the
-#' scaling divisor is contrast-specific. The `df_error`, `F_value`, and
-#' `psyr_p_value` columns are unchanged. When a legacy ANOVA table was
+#' scaling divisor is contrast-specific. The `df_num`, `df_error`, `F_value`,
+#' `theta` (when present), `p_value`, `p_value_adjusted`, and `p_adjustment`
+#' columns are unchanged.
+#' When a legacy ANOVA table was
 #' requested, it is printed once before both confidence-interval sections.
 #'
 #' @param x A result returned by `psyci()`.

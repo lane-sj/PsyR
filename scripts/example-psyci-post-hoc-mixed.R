@@ -114,38 +114,42 @@ post_hoc_results <- local({
         alpha = alpha
     )
 
-    expected_methods <- c(
-        "post-hoc within (Hotelling's T-squared)",
-        "Scheffe",
-        "post-hoc between x within (Roy's GCR)"
-    )
+    expected_methods <- c("Hotelling T-squared", "Scheffe", "Roy GCR")
 
     for (index in seq_along(results)) {
         table <- results[[index]]
-        available_p_values <- !is.na(table$psyr_p_value)
+        available_p_values <- !is.na(table$p_value_adjusted)
         comparable <- stats::complete.cases(
-            table$psyr_p_value,
+            table$p_value_adjusted,
             table$lower,
             table$upper
         )
 
         stopifnot(
-            all(c("df_error", "F_value") %in% names(table)),
+            all(c(
+                "df_num", "df_error", "F_value", "p_value",
+                "p_value_adjusted", "p_adjustment"
+            ) %in% names(table)),
             !any(c("df", "t.ratio", "p.value") %in% names(table)),
-            "psyr_p_value" %in% names(table),
-            all(is.finite(table$psyr_p_value[available_p_values])),
-            all(table$psyr_p_value[available_p_values] >= 0),
-            all(table$psyr_p_value[available_p_values] <= 1),
-            identical(
-                attr(table, "psyr_p_value_method"),
-                expected_methods[[index]]
-            ),
-            any(startsWith(
+            all(table$df_num == 1L),
+            isTRUE(all.equal(
+                table$p_value,
+                stats::pf(
+                    table$F_value, 1, table$df_error,
+                    lower.tail = FALSE
+                )
+            )),
+            all(is.finite(table$p_value_adjusted[available_p_values])),
+            all(table$p_value_adjusted[available_p_values] >= 0),
+            all(table$p_value_adjusted[available_p_values] <= 1),
+            all(table$p_adjustment == expected_methods[[index]]),
+            any(grepl(
+                "PsyR simultaneous-inference procedure:",
                 attr(table, "mesg"),
-                "PsyR p-value method:"
+                fixed = TRUE
             )),
             all(
-                (table$psyr_p_value[comparable] <= alpha) ==
+                (table$p_value_adjusted[comparable] <= alpha) ==
                     (table$lower[comparable] > 0 |
                         table$upper[comparable] < 0)
             )
@@ -155,13 +159,30 @@ post_hoc_results <- local({
             "\n",
             names(results)[[index]],
             " family — ",
-            attr(table, "psyr_p_value_method"),
+            unique(table$p_adjustment),
             "\n",
             sep = ""
         )
         print(as.data.frame(table))
         cat("Messages:\n", paste(attr(table, "mesg"), collapse = "\n"), "\n")
     }
+
+    gcr_parameters <- attr(
+        results[[3L]],
+        "psyr_probability_parameters"
+    )
+    stopifnot(
+        identical(names(gcr_parameters), c("s", "m", "n")),
+        isTRUE(all.equal(gcr_parameters$s, 2)),
+        isTRUE(all.equal(gcr_parameters$m, 0)),
+        isTRUE(all.equal(gcr_parameters$n, 41.5)),
+        "theta" %in% names(results[[3L]]),
+        isTRUE(all.equal(
+            results[[3L]]$theta,
+            results[[3L]]$F_value /
+                (results[[3L]]$df_error + results[[3L]]$F_value)
+        ))
+    )
 
     cat("\nAll mixed post-hoc p-value and CI checks passed.\n")
     results

@@ -120,15 +120,19 @@ The default is \code{FALSE}.}
 }
 \value{
 A list of PsyR contrast tables with confidence intervals added.
-Each table reports \code{df_error}, the ordinary one-degree-of-freedom Psy
-\code{F_value}, and \code{psyr_p_value}, the contrast-specific p-value computed from
-the selected PsyR reference distribution. The original \code{emmeans}
-\code{t.ratio} and \code{p.value} columns are removed. The table's
-\code{psyr_p_value_method} attribute records the method used for the PsyR
-p-values. Non-contrast rows are removed before correction. The attributes
+Each table reports \code{df_num = 1}, \code{df_error}, the ordinary observed Psy
+\code{F_value}, its unadjusted \code{F(1, df_error)} upper-tail \code{p_value}, the
+procedure-specific \code{p_value_adjusted}, and an explicit \code{p_adjustment}
+label. Roy GCR tables additionally report \code{theta}, calculated as
+\code{F_value / (df_error + F_value)} for entry into Psy's GCR probability
+calculator. The original \code{emmeans} \code{t.ratio} and \code{p.value} columns are removed.
+Non-contrast rows are removed before correction. The attributes
 \code{psyr_dropped_noncontrasts}, \code{psyr_orthogonality}, and
 \code{psyr_family_group} and \code{psyr_family_size} record filtering and
-grouping diagnostics, while
+grouping diagnostics. For Roy GCR output,
+\code{psyr_probability_parameters} contains Psy's \code{s}, \code{m}, and \code{n}; for SMR
+output, it contains row-specific \code{k = sqrt(F_value)} together with Psy's
+\code{p}, \code{q}, and \code{df} (PsyR's error degrees of freedom). The
 \code{mesg} contains corresponding human-readable messages. Printing the result
 shows the raw tables followed by tables in sample standard-deviation units,
 following the original Psy program. The scaled tables are also available

@@ -46,12 +46,18 @@ test_that("psyci exposes the new inferential schema", {
     expect_named(
         table,
         c(
-            "contrast", "estimate", "SE", "df_error", "F_value",
-            "psyr_p_value", "cc", "lower", "upper"
+            "contrast", "estimate", "SE", "df_num", "df_error", "F_value",
+            "p_value", "p_value_adjusted", "p_adjustment", "cc", "lower",
+            "upper"
         )
     )
     expect_null(attr(result, "legacy_anova_table", exact = TRUE))
+    expect_equal(table$df_num, rep(1L, nrow(table)))
     expect_equal(table$F_value, (table$estimate / table$SE)^2)
+    expect_equal(
+        table$p_value,
+        stats::pf(table$F_value, 1, table$df_error, lower.tail = FALSE)
+    )
     expect_equal(table$df_error, rep(40, nrow(table)))
 })
 
@@ -186,10 +192,22 @@ test_that("Bonferroni p-values are two-tailed probabilities from F", {
             lower.tail = FALSE
         )
     )
-    expect_equal(result$psyr_p_value, expected_t)
-    expect_equal(result$psyr_p_value, expected_f)
+    expect_equal(result$p_value_adjusted, expected_t)
+    expect_equal(result$p_value_adjusted, expected_f)
+    expect_equal(
+        result$p_value,
+        stats::pf(
+            result$F_value,
+            df1 = 1,
+            df2 = result$df_error,
+            lower.tail = FALSE
+        )
+    )
     expect_equal(result$F_value, individual$F_value)
-    expect_true(any(result$psyr_p_value != individual$psyr_p_value))
+    expect_equal(result$p_value, individual$p_value)
+    expect_true(any(
+        result$p_value_adjusted != individual$p_value_adjusted
+    ))
 })
 
 test_that("legacy anxiety statistics reproduce the original Psy table", {

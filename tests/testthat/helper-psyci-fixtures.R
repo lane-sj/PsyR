@@ -178,15 +178,18 @@ make_mixed_fixture <- function() {
 expect_psyci_table <- function(result, n_rows) {
   expect_true(is.data.frame(result))
   expect_true(all(c(
-    "estimate", "SE", "df_error", "F_value", "psyr_p_value",
-    "cc", "lower", "upper"
+    "estimate", "SE", "df_num", "df_error", "F_value", "p_value",
+    "p_value_adjusted", "p_adjustment", "cc", "lower", "upper"
   ) %in% names(result)))
   expect_false(any(c("df", "t.ratio", "p.value") %in% names(result)))
   expect_equal(nrow(result), n_rows)
   expect_true(all(is.finite(result$estimate)))
   expect_true(all(is.finite(result$SE)))
+  expect_true(all(result$df_num == 1L))
   expect_true(all(is.finite(result$df_error)))
   expect_true(all(is.finite(result$F_value)))
+  expect_true(all(is.finite(result$p_value)))
+  expect_true(all(is.finite(result$p_value_adjusted)))
   expect_true(all(is.finite(result$cc)))
   expect_true(all(is.finite(result$lower)))
   expect_true(all(is.finite(result$upper)))

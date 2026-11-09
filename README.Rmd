@@ -84,10 +84,26 @@ scaled_table <- attr(result, "scaled_tables")[[1]]
 attr(result, "scale_info")$divisor
 ```
 
-The standard tables report `df_error`, Psy's observed one-degree-of-freedom
-`F_value`, and the correction-specific `psyr_p_value`. The original `emmeans`
-`t.ratio` and `p.value` columns are not retained. To print Psy's legacy
-SS/df/MS/F layout for the supplied contrasts and keep it with the result, use:
+The standard tables report `df_num = 1`, `df_error`, and Psy's ordinary
+observed contrast statistic in `F_value`. The `p_value` column is always the
+unadjusted upper-tail probability from `F(1, df_error)`, so it corresponds
+directly to the displayed statistic. `p_value_adjusted` reports the probability
+from the selected simultaneous-inference procedure, named explicitly in
+`p_adjustment`; this is the probability commensurate with the reported
+confidence interval. For Bonferroni output, for example,
+`p_value_adjusted = min(1, family_size * p_value)`. The applicable family is
+recorded in the `psyr_family_group` and `psyr_family_size` attributes and is
+also described in the printed messages. The original `emmeans` `t.ratio` and
+`p.value` columns are not retained. To print Psy's legacy SS/df/MS/F layout for
+the supplied contrasts and keep it with the result, use:
+
+For direct checks in Psy's probability calculator, Roy GCR tables attach
+`psyr_probability_parameters = list(s, m, n)`. SMR tables attach
+`psyr_probability_parameters = list(k, p, q, df)`, where `k` contains one
+`sqrt(F_value)` per table row and `df` is PsyR's error degrees of freedom. Roy
+GCR tables also include a `theta` column equal to
+`F_value / (df_error + F_value)`; this is the value entered into Psy's GCR
+field.
 
 ```{r legacy_anova_example, eval = FALSE}
 result <- psyci(

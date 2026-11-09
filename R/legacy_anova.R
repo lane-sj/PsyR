@@ -432,8 +432,9 @@
     table[["p.value"]] <- NULL
 
     inferential <- c(
-        "estimate", "SE", "df_error", "F_value", "psyr_p_value",
-        "cc", "lower", "upper"
+        "estimate", "SE", "df_num", "df_error", "F_value", "theta",
+        "p_value", "p_value_adjusted", "p_adjustment", "cc", "lower",
+        "upper"
     )
     identifiers <- setdiff(names(table), inferential)
     table <- table[c(identifiers, intersect(inferential, names(table)))]

@@ -116,7 +116,10 @@ Now let's define and obtain our between-subjects contrast table. To do so, creat
 
 - "NT - ST" ➞ The difference between the New and Standard treatment conditions.
 
-We can now generate an ANOVA table with tests of significance of each of these between-subjects main effects. This will display the resulting p-values from an unadjusted t-test (from emmeans) and an ANOVA F Simultaneous Test Procedure (from PsyR). To do so, create the `btwn_fx` object. Then, call the `contrast()` function from the emmeans package, setting `emms_win` in the "object" argument and our newly defined `btwn_contrasts` in the "method" argument.
+We can now generate the emmeans contrast table for these between-subjects main
+effects. Its p-values come from emmeans; PsyR's ordinary and simultaneous-
+inference probabilities are added later by `psyci()`. Create the `btwn_fx`
+object by calling `contrast()` with `emms_btwn` and `btwn_contrasts`.
 
 ```{r, btwn}
 btwn_contrasts <- list(
@@ -139,7 +142,9 @@ Let's also define and obtain our within-subjects contrast table. To do so, creat
 
 - "FU1 - FU2" ➞ The difference between the 3 and 6 month follow-up measures of social anxiety.
 
-Using an overall Hotelling's T^2^ test procedure, we can generate an ANOVA table with tests of significance of each within-subjects main effect. This will display the resulting p-values from an unadjusted t-test (from emmeans) and a Hotelling's T^2^ test (from PsyR). To do so, create the `win_fx` object. Then, call the `contrast()` function from the emmeans package, setting `emms_win` in the "object" argument and our newly defined `win_contrasts` in the "method" argument.
+Next create the emmeans contrast table for the within-subjects main effects.
+The later `psyci()` call will report both each ordinary F probability and the
+Hotelling T-squared probability used with the simultaneous interval.
 
 ```{r, win}
 win_contrasts <- list(
@@ -153,7 +158,9 @@ win_fx <- contrast(emms_win, win_contrasts)
 knitr::kable(win_fx, digits = 3)
 ```
 
-Finally, lets create an ANOVA table of interaction effects using an overall test of Roy's GCR. This will display the resulting p-values from an unadjusted t-test (from emmeans) and a Roy's GCR test (from PsyR). To do so, create the `emms_int` object by calling `emmeans()`, placing `mod` in the object argument and outputting according to both our between-subjects and within-subjects independent variables. Next, create the `int_fx` object, calling `contrast()` and setting our newly made `emms_int` in the "object" argument and both our contrasts tables in the "method" argument.
+Finally, create the emmeans interaction-contrast table. When this table is
+passed to `psyci()`, `p_value_adjusted` will use Roy's GCR while `F_value` and
+`p_value` retain their ordinary one-degree-of-freedom interpretation.
 
 ```{r, int}
 emms_int <- emmeans(
@@ -204,7 +211,15 @@ psyci(
 
 The above table contains the results of a planned analysis of our three families using a bonferonni approach. While we will refrain from analysis of this table here, note that by way of the greater statistical power afforded to an a priori analysis, the SCIs will be more precise in this method than in a post-hoc method.
 
-Further, note that while the above table contains p-values from both emmeans and PsyR, the displayed SCIs are calculated by PsyR in accordance with their respective family's appropriate significance testing method. Thus, only PsyR's p-values are commensurate with the reported SCIs. The same will be true of next section's post-hoc table.
+The displayed `F_value` is the ordinary observed contrast statistic, and
+`p_value` is its unadjusted `F(1, df_error)` upper-tail probability.
+`p_value_adjusted` applies the procedure named in `p_adjustment`; that adjusted
+probability is commensurate with the displayed SCI. For this planned analysis,
+the label is Bonferroni and the applicable family size is recorded in each
+table's `psyr_family_size` attribute. The same distinction between ordinary and
+procedure-specific probabilities applies to the next section's post-hoc table.
+For Roy GCR rows, the `theta` column is the transformed root entered into Psy's
+GCR probability-calculator field.
 
 ### Post-Hoc method
 

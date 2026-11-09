@@ -17,6 +17,12 @@ flatten_psyr <- function(result) {
         table$.table <- i
         table
     })
+    columns <- unique(unlist(lapply(tables, names), use.names = FALSE))
+    tables <- lapply(tables, function(table) {
+        missing <- setdiff(columns, names(table))
+        table[missing] <- NA
+        table[columns]
+    })
     do.call(rbind, tables)
 }
 

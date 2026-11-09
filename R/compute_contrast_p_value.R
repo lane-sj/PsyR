@@ -126,6 +126,21 @@ compute_contrast_p_value <- function(
     p_value
 }
 
+.compute_unadjusted_contrast_p_value <- function(F_value, df_error) {
+    stats::pf(
+        F_value,
+        df1 = 1,
+        df2 = df_error,
+        lower.tail = FALSE
+    )
+}
+
+.compute_gcr_theta <- function(F_value, df_error) {
+    theta <- F_value / (df_error + F_value)
+    theta[is.infinite(F_value)] <- 1
+    theta
+}
+
 .compute_contrast_p_value_from_f <- function(
     statistic,
     method,
@@ -230,8 +245,7 @@ compute_contrast_p_value <- function(
                     call. = FALSE
                 )
             }
-            theta <- statistic / (v_e + statistic)
-            theta[is.infinite(statistic)] <- 1
+            theta <- .compute_gcr_theta(statistic, v_e)
             p_value <- vapply(theta, function(value) {
                 if (is.na(value)) {
                     return(NA_real_)
