@@ -44,6 +44,10 @@
 #' approximation as `smr_crit()`. Set `smr_params$seed` when results must be
 #' reproducible across separate calls.
 #'
+#' For `method = "bf"`, the result is explicitly two-tailed: with observed
+#' `F = t^2`, PsyR returns `min(1, n_k * P(F(1, v_e) >= F))`, equivalently
+#' `min(1, n_k * 2 * P(T(v_e) >= abs(t)))`.
+#'
 #' @export
 #'
 #' @examples
@@ -108,6 +112,47 @@ compute_contrast_p_value <- function(
         (estimate[observed] - null[observed]) / se_contrast[observed]
     )^2
 
+    p_value <- .compute_contrast_p_value_from_f(
+        statistic = statistic,
+        method = method,
+        v_e = v_e,
+        family = family,
+        n_k = n_k,
+        v_b = v_b,
+        v_w = v_w,
+        smr_params = smr_params
+    )
+    names(p_value) <- inputs$output_names
+    p_value
+}
+
+.compute_contrast_p_value_from_f <- function(
+    statistic,
+    method,
+    v_e,
+    family = NULL,
+    n_k = NULL,
+    v_b = NULL,
+    v_w = NULL,
+    smr_params = NULL,
+    smr_distribution = NULL
+) {
+    method <- .match_contrast_p_choice(
+        method,
+        choices = c("ind", "bf", "ph", "smr"),
+        argument = "method"
+    )
+    .validate_contrast_p_scalar(v_e, "v_e", lower = 0)
+    if (!is.numeric(statistic) || length(statistic) == 0L ||
+        any(!is.na(statistic) & statistic < 0) ||
+        any(is.nan(statistic))) {
+        stop(
+            "`statistic` must contain non-negative numbers, `Inf`, or `NA`.",
+            call. = FALSE
+        )
+    }
+    observed <- !is.na(statistic)
+
     if (method == "ind") {
         p_value <- stats::pf(statistic, 1, v_e, lower.tail = FALSE)
     } else if (method == "bf") {
@@ -117,7 +162,15 @@ compute_contrast_p_value <- function(
             lower = 0,
             integer = TRUE
         )
-        p_value <- n_k * stats::pf(statistic, 1, v_e, lower.tail = FALSE)
+        # For F = t^2 with one numerator df, this upper-tail probability is
+        # exactly the two-tailed t probability. Multiplying by n_k therefore
+        # gives the two-tailed Bonferroni p-value.
+        p_value <- n_k * stats::pf(
+            statistic,
+            df1 = 1,
+            df2 = v_e,
+            lower.tail = FALSE
+        )
     } else if (method == "ph") {
         family <- .match_contrast_p_choice(
             family,
@@ -151,9 +204,9 @@ compute_contrast_p_value <- function(
                     call. = FALSE
                 )
             }
-            f_statistic <- statistic * denominator_df / (v_w * v_e)
+            hotelling_f <- statistic * denominator_df / (v_w * v_e)
             p_value <- stats::pf(
-                f_statistic,
+                hotelling_f,
                 df1 = v_w,
                 df2 = denominator_df,
                 lower.tail = FALSE
@@ -196,20 +249,20 @@ compute_contrast_p_value <- function(
             }
         }
     } else {
-        smr_params <- .validate_smr_p_value_params(smr_params, v_e)
-        distribution <- .fit_smr_reference_distribution(
-            p = smr_params$p,
-            q = smr_params$q,
-            n = v_e,
-            n_sim = smr_params$n_sim,
-            seed = smr_params$seed
-        )
-        p_value <- .smr_reference_p_value(statistic, distribution)
+        if (is.null(smr_distribution)) {
+            smr_params <- .validate_smr_p_value_params(smr_params, v_e)
+            smr_distribution <- .fit_smr_reference_distribution(
+                p = smr_params$p,
+                q = smr_params$q,
+                n = v_e,
+                n_sim = smr_params$n_sim,
+                seed = smr_params$seed
+            )
+        }
+        p_value <- .smr_reference_p_value(statistic, smr_distribution)
     }
 
-    p_value <- pmin(1, pmax(0, p_value))
-    names(p_value) <- inputs$output_names
-    p_value
+    pmin(1, pmax(0, p_value))
 }
 
 .match_contrast_p_choice <- function(value, choices, argument) {

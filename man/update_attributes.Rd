@@ -33,9 +33,11 @@ see "?psyci" for further details}
 
 \item{v_e}{single value. df error}
 
-\item{v_w}{single value. df within. default = NA}
+\item{v_w}{Single value giving the within dimension used by a post-hoc
+procedure. The default is \code{NA}.}
 
-\item{v_b}{single value. df between. default = NA}
+\item{v_b}{Single value giving the between dimension used by a post-hoc
+procedure. The default is \code{NA}.}
 
 \item{alpha}{single value. applied alpha rate. default = .05}
 
@@ -58,8 +60,10 @@ and, when requested by \code{psyci()}, PsyR-compatible p-values.
 The added attributes tell you the key parameters that were used. Specifically,
 the method applied, the family of contrasts (if relevant), factors that were
 interpreted as between or within factors (where relevant), degrees of freedom
-(between (b), within (w), and b x w, where relevant), the alpha value applied,
-and the critical constant value.
+(between and within post-hoc dimensions, where relevant), the alpha value
+applied, and the critical constant value. The displayed \code{F_value} always has
+one numerator degree of freedom; individual and Bonferroni procedures do not
+use between or within post-hoc dimensions.
 }
 \examples{
 data(spacing)

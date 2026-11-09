@@ -72,6 +72,10 @@ Roy's Greatest Characteristic Root distribution through \code{pgcr()}.
 The SMR calculation uses the same simulated moment-based scaled-F
 approximation as \code{smr_crit()}. Set \code{smr_params$seed} when results must be
 reproducible across separate calls.
+
+For \code{method = "bf"}, the result is explicitly two-tailed: with observed
+\code{F = t^2}, PsyR returns \code{min(1, n_k * P(F(1, v_e) >= F))}, equivalently
+\code{min(1, n_k * 2 * P(T(v_e) >= abs(t)))}.
 }
 \examples{
 compute_contrast_p_value(

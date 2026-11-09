@@ -106,11 +106,6 @@ post_hoc_results <- local({
         between = between_table,
         between_by_within = interaction_table
     )
-    original_p_values <- lapply(
-        contrast_tables,
-        function(table) as.data.frame(summary(table))$p.value
-    )
-
     alpha <- 0.05
     results <- psyci(
         model = model,
@@ -120,7 +115,7 @@ post_hoc_results <- local({
     )
 
     expected_methods <- c(
-        "post-hoc within",
+        "post-hoc within (Hotelling's T-squared)",
         "Scheffe",
         "post-hoc between x within (Roy's GCR)"
     )
@@ -135,13 +130,9 @@ post_hoc_results <- local({
         )
 
         stopifnot(
-            "p.value" %in% names(table),
+            all(c("df_error", "F_value") %in% names(table)),
+            !any(c("df", "t.ratio", "p.value") %in% names(table)),
             "psyr_p_value" %in% names(table),
-            isTRUE(all.equal(
-                table$p.value,
-                original_p_values[[index]],
-                check.attributes = FALSE
-            )),
             all(is.finite(table$psyr_p_value[available_p_values])),
             all(table$psyr_p_value[available_p_values] >= 0),
             all(table$psyr_p_value[available_p_values] <= 1),

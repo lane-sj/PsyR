@@ -6,8 +6,10 @@
 #' The added attributes tell you the key parameters that were used. Specifically,
 #' the method applied, the family of contrasts (if relevant), factors that were
 #' interpreted as between or within factors (where relevant), degrees of freedom
-#' (between (b), within (w), and b x w, where relevant), the alpha value applied,
-#' and the critical constant value.
+#' (between and within post-hoc dimensions, where relevant), the alpha value
+#' applied, and the critical constant value. The displayed `F_value` always has
+#' one numerator degree of freedom; individual and Bonferroni procedures do not
+#' use between or within post-hoc dimensions.
 #'
 #' @param contrast_table a table of contrast values of class emmGrid
 #' @param method  a single string - method for confidence interval computation -
@@ -17,8 +19,10 @@
 #' @param between_factors a list of between subject factor names, default = NA
 #' @param within_factors a list of within subject factor names, default = NA
 #' @param v_e single value. df error
-#' @param v_w single value. df within. default = NA
-#' @param v_b single value. df between. default = NA
+#' @param v_w Single value giving the within dimension used by a post-hoc
+#'   procedure. The default is `NA`.
+#' @param v_b Single value giving the between dimension used by a post-hoc
+#'   procedure. The default is `NA`.
 #' @param alpha single value. applied alpha rate. default = .05
 #' @param smr_params  a list of parameters used for the Studentized Maximum Root method,
 #' if this methods was used. Must have named elements p and q. default = NULL
@@ -56,6 +60,7 @@ update_attributes <- function(contrast_table, method, family = NA,
                               smr_params = NULL,
                               p_value_method = NULL){
 
+  method_code <- method
   btwn_msg = FALSE
   wthn_msg = FALSE
   # set full family names for messages
@@ -87,8 +92,7 @@ update_attributes <- function(contrast_table, method, family = NA,
     p_value_message = paste0(
       "PsyR p-value method:",
       " ", p_value_method,
-      " has been applied to `psyr_p_value`; `p.value` retains the original ",
-      "emmeans result and may use a table-specific adjustment."
+      " has been applied to `psyr_p_value` using the displayed `F_value`."
     )
   }
 
@@ -101,28 +105,47 @@ update_attributes <- function(contrast_table, method, family = NA,
                                     )
   # now apply specific attributes depending on currently used family
   if (btwn_msg){
-    if (method == "Studentized Maximum Root (SMR)"){
-
-      attr(contrast_table, "mesg") <- c(attr(contrast_table, "mesg"),
-                                        paste("PsyR assumed between subject factor(s) are:",
-                                              paste(between_factors, collapse=", ")),
-                                        paste("PsyR used SMR parameter p of:", smr_params$p ),
-                                        paste("PsyR used SMR parameter q of:", smr_params$q )
+    attr(contrast_table, "mesg") <- c(
+      attr(contrast_table, "mesg"),
+      paste(
+        "PsyR assumed between subject factor(s) are:",
+        paste(between_factors, collapse=", ")
       )
-    } else {
-      attr(contrast_table, "mesg") <- c(attr(contrast_table, "mesg"),
-                                        paste("PsyR assumed between subject factor(s) are:",
-                                              paste(between_factors, collapse=", ")),
-                                        paste("PsyR used df between of:", v_b)
+    )
+    if (method_code == "ph") {
+      attr(contrast_table, "mesg") <- c(
+        attr(contrast_table, "mesg"),
+        paste("PsyR used post-hoc between dimension of:", v_b)
+      )
+    } else if (method_code == "smr") {
+      attr(contrast_table, "mesg") <- c(
+        attr(contrast_table, "mesg"),
+        paste("PsyR used SMR parameter p of:", smr_params$p),
+        paste("PsyR used SMR parameter q of:", smr_params$q)
       )
     }
   }
 
   if (wthn_msg){
-    attr(contrast_table, "mesg") <- c(attr(contrast_table, "mesg"),
-                                      paste("PsyR assumed within subject factor(s) are:",
-                                            paste(within_factors, collapse=", ")),
-                                      paste("PsyR used df within of:", v_w)
+    attr(contrast_table, "mesg") <- c(
+      attr(contrast_table, "mesg"),
+      paste(
+        "PsyR assumed within subject factor(s) are:",
+        paste(within_factors, collapse=", ")
+      )
+    )
+    if (method_code == "ph") {
+      attr(contrast_table, "mesg") <- c(
+        attr(contrast_table, "mesg"),
+        paste("PsyR used post-hoc within dimension of:", v_w)
+      )
+    }
+  }
+
+  if ("F_value" %in% names(contrast_table)) {
+    attr(contrast_table, "mesg") <- c(
+      attr(contrast_table, "mesg"),
+      "PsyR used numerator df of 1 for the displayed `F_value`."
     )
   }
 
@@ -141,7 +164,7 @@ update_attributes <- function(contrast_table, method, family = NA,
     if (identical(family, "b")) {
       "Scheffe"
     } else if (identical(family, "w")) {
-      "post-hoc within"
+      "post-hoc within (Hotelling's T-squared)"
     } else if (identical(family, "bw")) {
       "post-hoc between x within (Roy's GCR)"
     } else {

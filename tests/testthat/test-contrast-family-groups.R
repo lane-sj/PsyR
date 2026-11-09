@@ -74,7 +74,7 @@ test_that("family_group pools genuine contrasts after selector rows are dropped"
             estimate = table$estimate,
             se_contrast = table$SE,
             method = "bf",
-            v_e = unique(table$df),
+            v_e = unique(table$df_error),
             n_k = 18
         )
         expect_equal(table$psyr_p_value, expected_p)

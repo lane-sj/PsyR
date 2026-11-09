@@ -242,7 +242,7 @@
     interval <- algina_keselman_ci(
         estimate = table$estimate,
         se_contrast = table$SE,
-        df = table$df,
+        df = table$df_error,
         scale = divisor,
         alpha = alpha,
         adjust = adjust
@@ -319,7 +319,9 @@
 #' estimate, standard error, and confidence limits by the pooled sample SD used
 #' by the original Psy program. When Algina-Keselman intervals were requested,
 #' the standardized limits instead come from noncentral-t inversion and the
-#' scaling divisor is contrast-specific. Inferential columns are unchanged.
+#' scaling divisor is contrast-specific. The `df_error`, `F_value`, and
+#' `psyr_p_value` columns are unchanged. When a legacy ANOVA table was
+#' requested, it is printed once before both confidence-interval sections.
 #'
 #' @param x A result returned by `psyci()`.
 #' @param ... Additional arguments passed to the individual table print
@@ -328,6 +330,11 @@
 #' @return `x`, invisibly.
 #' @export
 print.psyr_ci <- function(x, ...) {
+    legacy_anova_table <- attr(x, "legacy_anova_table", exact = TRUE)
+    if (!is.null(legacy_anova_table)) {
+        print(legacy_anova_table)
+        cat("\n")
+    }
     cat("Raw contrast effects and confidence intervals (dependent-variable units)\n")
     .print_psyci_tables(x, ...)
 

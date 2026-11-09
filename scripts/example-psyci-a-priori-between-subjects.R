@@ -107,11 +107,6 @@ a_priori_between_results <- local({
         experience_simple_effects = experience_simple_table,
         interactions = interaction_table
     )
-    original_p_values <- lapply(
-        contrast_tables,
-        function(table) as.data.frame(summary(table))$p.value
-    )
-
     # The vignette treats these three tables as one non-independent family of
     # 16 planned contrasts and uses alpha = 2 * .05 for that family.
     alpha <- 0.10
@@ -134,13 +129,9 @@ a_priori_between_results <- local({
         )
 
         stopifnot(
-            "p.value" %in% names(table),
+            all(c("df_error", "F_value") %in% names(table)),
+            !any(c("df", "t.ratio", "p.value") %in% names(table)),
             "psyr_p_value" %in% names(table),
-            isTRUE(all.equal(
-                table$p.value,
-                original_p_values[[index]],
-                check.attributes = FALSE
-            )),
             all(is.finite(table$psyr_p_value[available_p_values])),
             all(table$psyr_p_value[available_p_values] >= 0),
             all(table$psyr_p_value[available_p_values] <= 1),

@@ -17,12 +17,13 @@ test_that("psyci adds individual and Bonferroni p-values", {
         v_e = v_e
     )
 
-    expect_equal(individual$p.value, before$p.value)
+    expect_false(any(c("t.ratio", "p.value", "df") %in% names(individual)))
+    expect_equal(individual$df_error, before$df)
+    expect_equal(individual$F_value, (before$estimate / before$SE)^2)
     expect_identical(individual$contrast, before$contrast)
     expect_equal(individual$psyr_p_value, expected_individual)
     expect_true(all(individual$psyr_p_value >= 0 &
         individual$psyr_p_value <= 1))
-    expect_true(any(abs(individual$psyr_p_value - individual$p.value) > 1e-8))
     expect_identical(
         attr(individual, "psyr_p_value_method"),
         "independent"
@@ -48,7 +49,7 @@ test_that("psyci adds individual and Bonferroni p-values", {
         n_k = nrow(before)
     )
 
-    expect_equal(bonferroni$p.value, before$p.value)
+    expect_equal(bonferroni$F_value, individual$F_value)
     expect_equal(bonferroni$psyr_p_value, expected_bonferroni)
     expect_identical(
         attr(bonferroni, "psyr_p_value_method"),
@@ -56,6 +57,26 @@ test_that("psyci adds individual and Bonferroni p-values", {
     )
     expect_true(any(grepl(
         "PsyR p-value method: Bonferroni",
+        attr(bonferroni, "mesg"),
+        fixed = TRUE
+    )))
+    expect_false(any(grepl(
+        "dimension of: NA",
+        attr(bonferroni, "mesg"),
+        fixed = TRUE
+    )))
+    expect_false(any(grepl(
+        "df between of:",
+        attr(bonferroni, "mesg"),
+        fixed = TRUE
+    )))
+    expect_true(any(grepl(
+        "numerator df of 1 for the displayed `F_value`",
+        attr(bonferroni, "mesg"),
+        fixed = TRUE
+    )))
+    expect_true(any(grepl(
+        paste("PsyR used df error of:", v_e),
         attr(bonferroni, "mesg"),
         fixed = TRUE
     )))
@@ -115,7 +136,10 @@ test_that("psyci uses the pooled Bonferroni family size", {
             v_e = v_e,
             n_k = pooled_n_k
         )
-        expect_equal(observed[[index]]$p.value, before[[index]]$p.value)
+        expect_equal(
+            observed[[index]]$F_value,
+            (before[[index]]$estimate / before[[index]]$SE)^2
+        )
         expect_equal(observed[[index]]$psyr_p_value, expected)
     }
 })
@@ -145,7 +169,7 @@ test_that("psyci maps post-hoc p-values to each contrast family", {
     )
     expected_labels <- c(
         "Scheffe",
-        "post-hoc within",
+        "post-hoc within (Hotelling's T-squared)",
         "post-hoc between x within (Roy's GCR)"
     )
 
@@ -161,7 +185,10 @@ test_that("psyci maps post-hoc p-values to each contrast family", {
             v_w = if (family %in% c("w", "bw")) v_w else NULL
         )
 
-        expect_equal(observed[[index]]$p.value, before[[index]]$p.value)
+        expect_equal(
+            observed[[index]]$F_value,
+            (before[[index]]$estimate / before[[index]]$SE)^2
+        )
         expect_equal(observed[[index]]$psyr_p_value, expected)
         expect_identical(
             attr(observed[[index]], "psyr_p_value_method"),
@@ -174,10 +201,34 @@ test_that("psyci maps post-hoc p-values to each contrast family", {
         )))
     }
 
+    between_messages <- attr(observed[[1L]], "mesg")
+    within_messages <- attr(observed[[2L]], "mesg")
+    interaction_messages <- attr(observed[[3L]], "mesg")
+    expect_true(any(grepl(
+        paste("post-hoc between dimension of:", v_b),
+        between_messages,
+        fixed = TRUE
+    )))
+    expect_true(any(grepl(
+        paste("post-hoc within dimension of:", v_w),
+        within_messages,
+        fixed = TRUE
+    )))
+    expect_true(any(grepl(
+        paste("post-hoc between dimension of:", v_b),
+        interaction_messages,
+        fixed = TRUE
+    )))
+    expect_true(any(grepl(
+        paste("post-hoc within dimension of:", v_w),
+        interaction_messages,
+        fixed = TRUE
+    )))
+
     expect_identical(observed[[1L]]$contrast, before[[1L]]$contrast)
     expect_identical(observed[[2L]]$contrast, before[[2L]]$contrast)
     expect_identical(
-        observed[[3L]][c("group_custom", "spacing_custom")],
+        as.data.frame(observed[[3L]][c("group_custom", "spacing_custom")]),
         before[[3L]][c("group_custom", "spacing_custom")]
     )
 })
@@ -231,7 +282,7 @@ test_that("psyci reuses one seeded SMR distribution for CIs and p-values", {
     expect_identical(sampler_calls, 1L)
     expect_identical(.Random.seed, seed_before)
     for (table in observed) {
-        expect_equal(table$p.value, before$p.value)
+        expect_equal(table$F_value, (before$estimate / before$SE)^2)
         expect_equal(table$cc, rep(expected_cc, nrow(before)))
         expect_equal(table$psyr_p_value, expected_p_value)
         expect_identical(

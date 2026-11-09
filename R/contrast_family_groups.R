@@ -289,8 +289,7 @@
         messages <- c(messages, sprintf(
             paste0(
                 "PsyR Bonferroni confidence intervals and `psyr_p_value` use ",
-                "family_group '%s', containing %d genuine contrast(s); ",
-                "`p.value` retains the original emmeans result."
+                "family_group '%s', containing %d genuine contrast(s)."
             ),
             correction_group, family_size
         ))
