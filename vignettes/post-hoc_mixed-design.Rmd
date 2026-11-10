@@ -1,20 +1,15 @@
 ---
-title: "Post-Hoc Mixed Between x Within Design"
+title: "Planned Factorial Analysis of Mixed Designs with Simple Effects"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{post-hoc_mixed-design}
+  %\VignetteIndexEntry{planned-factorial_mixed-designs_simple-effects}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-bibliography: references.bib
 ---
 
-A vignette to demonstrate how to use PsyR to enact a Post-Hoc Analysis of Variance via Confidence Intervals in a mixed between x within design, as in chapter 7 of @bird2004. The method defines and analyses 3 families - between, within, and between x within. In doing so, contrast F~c~s and critical constants are defined according to their family's critical value, ensuring the FWER is controlled at ⍺. This is especially relevant for the within-subjects and between x within-subjects families, where the current method (appropriately) assumes a lack of sphericity (i.e. assuming that in the population, every possible normalised contrast does not share the same error variance). Consequently, separate MSE and SE terms are defined for each contrast in these families, protecting against inflation of the type I error rate. The families are as follows:
+A vignette to demonstrate how to conduct a planned analysis of a between x within-subjects design. Simple effects contrasts allow a researcher to analyse cell mean differences at one level of a factor by the level (or levels) of the other factor. This is relevant when trying to understand what may be driving an interaction effect, as an interaction effect contrast may be partitioned into two simple effects contrasts.
 
-- **Between** - The overall between main effect using a Scheffé ANOVA F Simultaneous Test Procedure, where an omnibus post-hoc ANOVA F test is conducted followed by significance testing of individual contrasts. This is a univariate approach, assuming sphericity.
-
-- **Within** - The overall within main effect using a Hotelling's T^2^ test [@hotelling1931]. This is a multivariate approach, assuming a lack of sphericity.
-
-- **Between x Within** - The interaction of the between and within effects using Roy's Greatest Characteristic Root [@roy1953]. This is a multivariate approach, assuming a lack of sphericity. In using a GCR method, PsyR adequately controls the type I error rate when creating post-hoc SCIs.
+In partitioning analysis out at the individual level of a factor, a simple effects analysis produces non-orthogonal families which are incompatible with how an ANOVA F Simultaneous Test Procedure controls the FWER. Instead, and as will be demonstrated in this vignette, a simple effects analysis may define a single non-standard all-factorial contrasts family, allowing for investigation of simple effects, main effects and interaction effects across all families. Alternatively, one can conduct a more powerful analysis by defining two families - the A and B Simple Effects Families - which allows one to examine either (but not both) A or B simple effects. Regardless of the amount of examined families, the FWER is indirectly controlled by directly controlling the Per-Experiment Error Rate at $m$ · ⍺, where $m$ is equal to the number of non-standard families defined.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -22,10 +17,9 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-
 ## The Packages
 
-To use PsyR to calculate confidence intervals over contrast effects defined post-hoc, we will utilise a workflow with functions from [afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to implement ANOVA models, and [emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated marginal means and the required contrast estimates. So let's load those packages, and any others that are helpful for our workflow.
+To use PsyR to calculate confidence intervals over contrast effects, we will utilise a workflow with functions from [afex](https://www.rdocumentation.org/packages/afex/versions/1.4-1) to implement ANOVA models, and [emmeans](https://rvlenth.github.io/emmeans/) to obtain estimated marginal means and the required contrast estimates. So let's load those packages, and any others that are helpful for our workflow.
 
 ```{r setup, message = FALSE, warning = FALSE}
 library(afex)
@@ -36,244 +30,250 @@ library(tidyverse)
 
 ## The Data
 
-The `social_anxiety` dataframe contains the results of an experiment with N = 90 participants assessing a new treatment for social anxiety using a 3 x (4) design. Participants are randomly allocated to one of three levels of the between-subjects independent variable: a minimum contact control condition, a standard treatment, or a new treatment. All participants are measured on four occasions: immediately before treatment, immediately after treatment, at a 3 month follow-up, and at a 6 month follow-up. The dependent variable is social anxiety rating, where a lower score is indicative of lower social anxiety.
+The `depression` dataframe contains the results of a longitudinal study examining the impact of treatments for depression on *N* = 15 patients. Patients are randomly assigned to one of *J* = 3 treatment conditions (Treatment 1, Treatment 2, or a waitlist Control), and their happiness is measured at *p* = 3 occasions (pre-treatment, immediately post-treatment, and at a follow up). The dependent variable is happiness, with a higher score being indicative of greater happiness.
 
-Lets load the data, then call the `head()` function to print the first 5 rows.
+Let's load the data, then call the `head()` function to print the first 5 rows.
 
-```{r loaddata, message = FALSE, warning = FALSE}
-data(social_anxiety)
-head(social_anxiety, 5)
+```{r loaddata}
+data(depression)
+head(depression, 5)
 ```
 
-To learn more about the `social_anxiety` dataframe call the help function using `?df` to open its documentation.
+To learn more about the `depression` dataframe, call the help function using `?df` to open its documentation.
 
-```{r, what_socialanx, message = FALSE, warning = FALSE, eval = FALSE}
-?social_anxiety
+```{r, whatdepression, message = FALSE, warning = FALSE, eval = FALSE}
+?depression
 ```
 
-Also, let's tidy up the data, labeling the levels of our independent variables for greater clarity.
+Also, let's tidy up the data, labelling the levels of our independent variables for greater clarity.
 
-```{r longform}
-social_anxiety <- social_anxiety %>%
+```{r sortdep}
+depression <- depression %>%
   mutate(
-    Session = fct_relevel(
-      Session, "Pre", "Post", "FU1", "FU2"
-    ),
-    Group = factor(Group),
-    Group = fct_recode(
-      Group,
-      "New" = "1",
-      "Standard" = "2",
-      "MinContact" = "3"
-    )
+    Group = fct_relevel(Group, 'Ctrl', 'Tmt1', 'Tmt2'),
+    Time = fct_relevel(Time, 'Pre', 'Post', 'FU'),
+    Subject = factor(Subject)
   )
 ```
 
-Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (alongside other methods) can be used to inform which contrasts should be analysed. This is especially relevant for post-hoc analyses, where we may notice trends and patterns emerging that could not have been conceptualised a priori.
+Next, let's visualise our data. Doing so allows us to more intuitively understand its layout.
 
-```{r linegraphit, fig.width = 7, fig.height = 4, message = FALSE, warning = FALSE, dev = 'svg'}
-social_anxiety %>%
-  group_by(Group, Session) %>%
-  summarise(
-    Score = mean(Score) 
-  ) %>% 
-  ggplot(aes(x = Session, y = Score, colour = Group, shape = Group)) +
-    geom_point() +
-    geom_line(aes(group = Group)) +
-    theme_classic(base_size = 14)
+```{r plothappiness,  fig.width = 7, fig.height = 4, message = FALSE, warning = FALSE}
+depression %>% 
+  group_by(Group, Time) %>%
+  summarise(mean_happiness = mean(Happiness)) %>%
+  ggplot(aes(x = Time, y = mean_happiness, group = Group, colour = Group)) +
+  geom_point(aes(fill = Group, shape = Group), size = 3) +
+  geom_line() + 
+  scale_shape_manual(values = c(21:24)) +
+  theme_classic(base_size = 14) +
+  theme(legend.position = c(.15, .80))
 ```
 
 ## The Analysis
 
-Lets prepare to run some statistical tests!
+Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for three distinct tests of the homogeneity hypothesis (one per family) and corresponding SCIs per family. The following code builds towards this approach.
+Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `Happiness` column as the dependent variable, the `depression` dataframe, the `Group` column as the between-subjects IV, and the `Time` column as the within-subjects IV. Finally, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Group` and `Time`. Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. Running this code will give us the cell means for the dependent variable (Happiness) at each level of the independent variables (Treatment Group, Time).
 
-First, let's specify that we want a multivariate analysis, using the `afex_options()` function. Next, let's create the object `mod` by calling the `aov_ez()` function. Place the "Subject" column in the ID argument, "Score" as our dependent variable, `social_anxiety` as our dataframe, "Group" as the between-subjects factor, and "Session" as the within-subjects factor. Finally, create the `emms_win` object, calling the `emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output according to "Session" (which, as a reminder, is a column of the factor datatype that identifies what level of the within-subjects independent variable the score belongs to). Running this code will give us the estimated marginal means for each level of the within-subjects independent variable.
-
-Of note, defining `mod` in this way enables emmeans to compute estimated marginal means from which to apply contrasts of interest. Thus, this workflow differs from the more common omnibus ANOVA with follow up significance tests.
-
-```{r model}
-# set emmeans option to multivariate
+```{r aov, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
 
-# perform the statistical model
 mod <- aov_ez(
   "Subject", 
-  "Score", 
-  social_anxiety, 
+  "Happiness", 
+  depression, 
   between = "Group",
-  within = "Session"
+  within = "Time" 
 )
 
-emms_win <- emmeans(mod, "Session")
-knitr::kable(emms_win, digits = 3)
+emms <- emmeans(mod, c("Group", "Time"))
+knitr::kable(emms, digits = 3)
 ```
 
-Now let's define and obtain our between-subjects contrast table. To do so, create the `btwn_contrasts` object, calling `list()` to define our contrasts, which compare the following:
+Time to define our contrasts!
 
-- "Ts - C" ➞ The difference between the minimum contact Control condition and the average of the two treatment conditions.
+To do so, it is important to look at the stated aims of the research and the hypothesised pattern of sample means in the data. In this example, the following between-subjects contrasts are chosen for analysis:
 
-- "NT - ST" ➞ The difference between the New and Standard treatment conditions.
+- "Ts - Ctrl" ➞ The difference between the average happiness scores of Treatments 1 and 2 and the waitlist Control, holding constant time of measurement.
 
-We can now generate the emmeans contrast table for these between-subjects main
-effects. Its p-values come from emmeans; PsyR's ordinary and simultaneous-
-inference probabilities are added later by `psyci()`. Create the `btwn_fx`
-object by calling `contrast()` with `emms_btwn` and `btwn_contrasts`.
+- "T1 - T2" ➞ The difference between the average happiness scores of Treatment 1 and Treatment 2, holding constant time of measurement.
 
-```{r, btwn}
-btwn_contrasts <- list(
-  "Ts - C" = c(0.5, 0.5, -1),
-  "NT - ST" = c(1, -1, 0)
-) 
+Likewise, the following within-subjects contrasts are chosen for analysis:
 
-emms_btwn <- emmeans(mod, "Group")
+- "Post - Pre" ➞ The difference between average happiness scores taken post versus pre-treatment, holding constant treatment type.
 
-btwn_fx <- contrast(emms_btwn, btwn_contrasts)
-### note to self - p vals from emmeans rather than PsyR
-knitr::kable(btwn_fx, digits = 3)
-```
+- "FU - Post" ➞ The difference between average happiness scores taken at follow-up versus post-treatment, holding constant treatment type.
 
-Let's also define and obtain our within-subjects contrast table. To do so, create the `win_contrasts` object, calling `list()` to define our contrasts, which compare the following:
-
-- "Pre - Rest" ➞ The difference between the measure of social anxiety before treatment and the average of measures taken after treatment administration.
-
-- "Post - FUs" ➞ The difference between the measure of social anxiety immediately after treatment and the average of the two measures taken at follow-up.
-
-- "FU1 - FU2" ➞ The difference between the 3 and 6 month follow-up measures of social anxiety.
-
-Next create the emmeans contrast table for the within-subjects main effects.
-The later `psyci()` call will report both each ordinary F probability and the
-Hotelling T-squared probability used with the simultaneous interval.
-
-```{r, win}
-win_contrasts <- list(
-  "Pre - Rest" = c(1, -1/3, -1/3, -1/3),
-  "Post - FUs" = c(0, 1, -0.5, -0.5),
-  "FU1 - FU2" = c(0, 0, 1, -1)
-) 
-
-win_fx <- contrast(emms_win, win_contrasts)
-### note to self - p vals from emmeans rather than PsyR
-knitr::kable(win_fx, digits = 3)
-```
-
-Finally, create the emmeans interaction-contrast table. When this table is
-passed to `psyci()`, `p_value_adjusted` will use Roy's GCR while `F_value` and
-`p_value` retain their ordinary one-degree-of-freedom interpretation.
-
-```{r, int}
-emms_int <- emmeans(
-  mod, c("Group", "Session")
+```{r all_contrasts}
+between_contrasts = list(
+  "Ts - Ctrl" = c(-1, 0.5, 0.5),
+  "T1 - T2" = c(0, 1, -1)
 )
 
+within_contrasts = list(
+  "Post - Pre" = c(-1, 1, 0),
+  "FU - Post" = c(0, -1, 1)
+)
+```
+
+Now that we have defined our contrasts, let's obtain their estimated marginal means. First, let's address our between-subjects contrasts. To do so, create `emms_grp` by calling `emmeans::emmeans()`, placing `mod` in the "Object" argument and outputing based upon the between-subjects factor `Group`. Next, let's store results of significance tests of main effects of our between-subjects factor within a table. Create the `btwn_fx` object, then call `emmeans::contrast()`, setting `emms_grp` in the "Object" argument and `btwn_contrasts` in the "Method" argument. The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+
+```{r, btwn_fx}
+emms_btwn <- emmeans(mod, c("Group"))
+btwn_fx <- contrast(emms_btwn, between_contrasts)
+```
+```{r, kable_btwn_fx, echo = FALSE}
+btwn_display <- as.data.frame(btwn_fx)
+
+btwn_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
+```
+
+Following similar steps as with our between-subjects contrasts, let's obtain the estimated marginal means for the different time points of measurement and store the results of hypothesis tests of the main effect of each contrast within the `win_fx` object.
+
+```{r, win_fx}
+emms_win <- emmeans(mod, c("Time"))
+win_fx <- contrast(emms_win, within_contrasts)
+```
+```{r, kable_win_fx, echo = FALSE}
+win_display <- as.data.frame(win_fx)
+
+win_display |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
+```
+
+Finally, let's generate output of significance tests of our interaction contrasts (i.e. the interaction of our between and within-subjects contrasts). To do so, create `int_fx` and call `emmeans::contrast()`. Place `emms` in the "Object" argument (which, as a reminder, contains the cell means of our between x within-subjects conditions), and place a list of our between and within-subjects contrasts in the "interaction" argument.
+
+```{r int_fx}
 int_fx <- contrast(
-  emms_int,
-  interaction = list(btwn_contrasts, win_contrasts)
-) 
-### note to self - p vals from emmeans rather than PsyR
-knitr::kable(int_fx, digits = 3)
+  emms, 
+  interaction = list(between_contrasts, within_contrasts)
+)
 ```
+```{r, kable_int_fx, echo = FALSE}
+int_display <- as.data.frame(int_fx)
 
-### A Priori Confidence Intervals
-
-To demonstrate the benefits of a post-hoc method, we must first showcase a planned analysis, with the purpose of highlighting that compared to a planned analysis, a post-hoc analysis accepts a loss statistical power in exchange for greater flexibility. Here we replicate the Bonferroni correction first presented in chapter 7 of @bird2004. To do so, let's first create the `all_fx` object which is a vector of the three contrast tables previously made. PsyR infers the family and participating factors for every original `emmGrid`. Next, call `psyci()` with the following arguments.
-
-- The model is the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
-
-- The contrast_tables argument is set as the previously made `all_fx` object which contains a list of the between, within and between x within contrast tables.
-
-- The method is set as "bf", creating SCIs (estimate ± SE · cc) using the Bonferroni-t procedure.
-
-- PsyR identifies the within, between, and between-by-within families and their participating factors from the model and contrast coefficients.
-
-- Alpha is set as the previously defined `alphas` where ⍺ = 0.05.
-
-```{r, bon, message = FALSE, warning = FALSE}
-all_fx <- list(win_fx, btwn_fx, int_fx)
-alphas = .05 # 3 * alpha / nk
-
-psyci(
-  model = mod, contrast_tables = all_fx, method = "bf", 
-  alpha = alphas
-) %>%
-  unclass() %>%
-  bind_rows() %>%
-  rename(
-    main_effect = contrast,
-    between = Group_custom,
-    within = Session_custom
-    ) %>%
-  relocate(main_effect, between, within) %>%
-  ### note to self - p vals from emmeans rather than PsyR
+int_display |> 
+  select(Group_custom:df) |> 
   knitr::kable(digits = 3)
 ```
 
-The above table contains the results of a planned analysis of our three families using a bonferonni approach. While we will refrain from analysis of this table here, note that by way of the greater statistical power afforded to an a priori analysis, the SCIs will be more precise in this method than in a post-hoc method.
+### Simple Effects
 
-The displayed `F_value` is the ordinary observed contrast statistic, and
-`p_value` is its unadjusted `F(1, df_error)` upper-tail probability.
-`p_value_adjusted` applies the procedure named in `p_adjustment`; that adjusted
-probability is commensurate with the displayed SCI. For this planned analysis,
-the label is Bonferroni and the applicable family size is recorded in each
-table's `psyr_family_size` attribute. The same distinction between ordinary and
-procedure-specific probabilities applies to the next section's post-hoc table.
-For Roy GCR rows, the `theta` column is the transformed root entered into Psy's
-GCR probability-calculator field.
+In this analysis, we will define a single all factorial family consisting of the A(b), B(a), A, B and AB effects. This will allow us to investigate both *a* and *b* simple effects
 
-### Post-Hoc method
+Let's start by calculating the cell means for our within x between-subjects factors. To do so, create `win_by_grp` by calling `emmeans::emmeans()`. Place `mod` in the "Object" argument, and `Time` by `Group` in the "Specs" argument. Next, create `win_by_grp_fx` by calling `emmeans::contrast()`. Place our newly made `win_by_grp` in the "Object" argument and `within_contrasts` in the "Method" argument. Thus, hypothesis tests of each interaction contrast will be stored within `win_by_grp_fx`.
 
-Using near-identical code, we will now demonstrate the post-hoc method. To run a post-hoc analysis, change the method argument to "ph". A post-hoc method affords greater flexibility by controlling the FWER at the nominal ⍺ regardless of the number of contrasts examined. However, this flexibility comes at the cost of power.
+```{r, win_at_grp}
+win_by_grp <- emmeans(mod, ~ Time|Group)
+win_by_grp_fx <- contrast(win_by_grp, method = within_contrasts)
+```
+```{r, kable_wingrp_fx, echo = FALSE}
+wingrp_display <- as.data.frame(win_by_grp_fx)
 
-```{r, psyci, message = FALSE, warning = FALSE}
-psyci(
-  model = mod, contrast_tables = all_fx, method = "ph", 
-  alpha = alphas
-) %>%
-  unclass() %>%
-  bind_rows() %>%
-  rename(
-    main_effect = contrast,
-    between = Group_custom,
-    within = Session_custom
-    ) %>%
-  relocate(main_effect, between, within) %>%
-  ### note to self - p vals from emmeans rather than PsyR
+wingrp_display |> 
+  select(contrast:df) |> 
   knitr::kable(digits = 3)
 ```
 
-By and large, a post-hoc analysis merits the same conclusions as the above a priori analysis, with the caveat that the loss of power necessary in a post-hoc method has yielded less precise SCIs. However, engaging in this method affords greater flexibility to a researcher, who may define a limitless number of contrasts post-hoc to answer research questions that could not have been conceived a priori. Analysis of these SCIs may look as follows.
+Next, let's define our desired simple effects and apply them to obtain simple effects contrasts for each of our between-subjects contrasts. Here, we are only interested in the post and follow-up within-subjects levels. To obtain these, create the `within_simple` object and call `list()` to store within it the post and follow up levels. After this, create the `btwn_by_treat_fx` object, within which we will store the results of hypothesis tests of our A(b) simple effects contrasts. To do so, call `emmeans::contrast()`, placing `emms` in the "Object" argument and a list of our between-subjects and within-simple contrasts in the "Interaction" argument.
 
-**Main Effects**
+```{r, btwn_at_within}
+within_simple <-  list(
+  "Post*" = c(0, 1, 0),
+  "FU*" = c(0, 0, 1)
+)
+btwn_by_treat_fx <- contrast(emms, interaction = list(between_contrasts, within_simple))
+```
+```{r, kable_btwntreat, echo = FALSE}
+btwntreat_display <- as.data.frame(btwn_by_treat_fx)
 
-It should be noted that in a factorial design, main effects contrasts tend to be of little interest to a researcher. This is because they average across all points of one of the independent variables. In the current example, this looks like either being agnostic to the treatment administered or being agnostic to the time point at which the measurement of social anxiety is taken. Nonetheless, the following conclusions may be drawn.
+btwntreat_display |> 
+  select(Group_custom:df) |> 
+  knitr::kable(digits = 3)
+```
 
-Within-Subjects: Averaged across treatment conditions, the following may be stated. The average of social anxiety scores at post-treatment and follow up measures are between 2.256 and 5.840 units less than scores at pre-treatment. However, participants seem to relapse. Specifically, when comparing scores immediately post-treatment to the average of follow-up scores, participants demonstrate an increase in social anxiety of between 3.435 and 5.854 units. Further, social anxiety is greater at the 6 month follow-up than at 3 month follow-up by between 0.949 and 3.007 units.
+### Applying PsyR to generate Confidence Intervals
 
-Between-Subjects: Averaged across all time points, the following may be stated. While there is insufficient evidence to conclude that the average scores of treatments for social anxiety are significantly different to the minimal contact Control condition (-7.142, 0.317), it seems this effect is being driven by the lack of effectiveness of the standard treatment. When directly comparing the new and standard treatments, the new treatment results in a significant reduction in social anxiety between 0.218 and 8.832 units.
+The following section will detail how to conduct an a priori analysis of main, interaction and simple effects contrasts. In doing so, we aim to demonstrate how a simple effects analysis can be useful in understanding what is driving interaction effects, as well as how this analysis must be adjusted as compared to an F-STP approach to main and interaction effects.
 
-**Interactions**
+To run our planned analysis, let's do the following. First, create the object all_fx by creating a vector containing lists of the results of significance tests of contrasts from our all factorial family. Next, create alphas, which will take in a list of alphas of equal length to the number of families (3). Here, alpha will be set at $m · ⍺$ ($3 · .05 = .15$). 
 
-Given the goal of the current research is to quantify the impact of a simultaneous manipulation to both a between and within subjects IV, the contrasts of greatest interest tend to be interactions. For our interaction contrasts, the following conclusions may be drawn.
+Next, we will call psyci() and input the following.
 
-When comparing the average of the treatments to the minimal contact control, the following may be said. Averaged across post-treatment and follow-up measures, there is insufficient evidence to conclude that receiving a treatment results in a difference in social anxiety scores at the average of post and follow-up measures as compared to the pre-treatment baseline (-0.777, 8.188). However, there is evidence of a relapse in social anxiety at the follow-up conditions compared to the post-treatment measure (2.917, 8.967), with social anxiety greater at the 6 month than 3 month follow-up (1.744, 6.890).
+- The model is set as the previously made mod object, where the model must be made using the afex package (and of class afex_aov).
 
-When comparing the new treatment to the standard treatment, the following may be said. There is insufficient evidence to suggest a difference between social anxiety levels before treatment and at the average of post and follow-up treatment measures (-1.542, 8.809). However, the new treatment seems to lead to reduced relapse as compared to the standard treatment. Specifically, compared to social anxiety post-treatment, the average of social anxiety scores across 3 and 6 month follow-up measurements show that participants who underwent the new treatment score between 0.957 and 7.943 units lower on social anxiety. This reduced relapse is sustained when comparing the 6 month to 3 month follow-up scores, with participants who received the new treatment experiencing between 0.929 and 6.871 fewer units of social anxiety than their standard treatment counterparts.
+- The contrast_tables argument is set as the previously made all_fx list.
 
-### The Benefit of Post-Hoc Simultaneous Confidence Intervals
+- The method is set as "bf" to indicate a Bonferonni adjustment should be enacted.
 
-A post-hoc method allows a researcher to flexibly update their analysis plan to align with questions that emerge after data has been collected. In the current example, and as guided by data visualisation and calculation of the maximal contrast, this may look like introducing main effects contrasts comparing the new treatment to the minimal contact control, and social anxiety scores at the 6 month follow up to post-treatment scores, thereby allowing the researcher to examine the resulting (likely significant) interaction contrast.
+- Alpha is set at alphas, indicating the desired type I error rate should be set per family at .15 (as has been previously established).
 
-Further, the addition of SCIs allows one to understand the magnitude and precision of an effect. In the current example, many contrasts have yielded statistically significant results, but further inspection of SCIs suggests that the magnitude of these effects is imprecise, with many lower bounds approaching 0. To place this in a realistic context, imagine that following new government guidelines the researcher was only interested in interventions that resulted in a difference of **2 units** on social anxiety. The addition of this stipulation alters our analysis, allowing for greater nuance in the interpretation of our results. Our conclusion regarding our post-hoc interaction SCIs may now look as follows:
+Note that while PsyR generally infers the family and participating factors for every original emmgrid, the family_group must be manually defined when conducting an all-factorial simple effects analysis. To do so, call `rep()` to generate the string "all_factorial" a number of times equal to the length of `all_fx` (3).
 
-When comparing the average of the treatments to the minimal contact control, the following may be said. In the average of post-treatment and follow-up measures as compared to pre-treatment measures, there is insufficient evidence to suggest a significant difference. However, the directionality and magnitude of the SCIs shows that participants do not experience a clinically important increase in social anxiety (\|-0.777\| \< 2), but they may experience a clinically important decrease (8.188 \> 2). However, there is evidence of a significant and clinically important relapse at the follow-up conditions as compared to the post-treatment measure (2.917, 8.967). Finally, a significant but not clinically important increase in social anxiety is detected when comparing social anxiety scores at 6 versus 3 month follow-ups (1.744, 6.890)
+```{r, psyci}
+all_fx <- c(win_fx, btwn_fx, int_fx, win_by_grp_fx, btwn_by_treat_fx)
+alphas = 3*.05 # 3 * alpha / nk
 
-When comparing the new treatment to the standard treatment, the following may be said. There is insufficient evidence to suggest a difference between social anxiety levels before treatment and at the average of post and follow-up treatment measures. However, the directionality and magnitude of the SCIs shows that participants do not experience a clinically important increase in social anxiety (\|-1.542\| \< 2), whereas they may experience a clinically important reduction in social anxiety (8.809 \> 2). The new treatment seems to lead to reduced relapse as compared to the standard treatment, although there is insufficient evidence to suggest clinical difference. Compared to social anxiety post-treatment, the average of social anxiety scores across 3 and 6 month follow-up measurements show that participants who underwent the new treatment score between 0.957 and 7.943 units lower on social anxiety. This reduced relapse is sustained when comparing the 6 month to 3 month follow-up scores, with participants who received the new treatment experiencing between 0.929 and 6.871 fewer units of social anxiety than their standard treatment counterparts.
+output <- psyci(
+  model = mod,
+  contrast_tables = all_fx,
+  method = "bf",
+  alpha = alphas,
+  family_group = rep("all_factorial", length(all_fx))
+)
+```
+``` {r, kable_output, echo = FALSE}
+display <- output %>%
+  unclass() %>%
+  bind_rows() %>%
+  mutate(
+   col = coalesce(contrast, Group, Group_custom),
+   Time = coalesce(Group, contrast, Time_custom),
+  ) %>%
+  rename(ignore = Group, Group = col) %>%
+  select(estimate:psyr_p_value, Group, Time) %>%
+  relocate(Group, Time)
+
+display[1, 1] <- NA
+display[2, 1] <- NA
+display[3, 2] <- NA
+display[4, 2] <- NA
+
+knitr::kable(display, digits = 3)
+```
+
+## The Interpretation
+
+Simple Effects Contrasts are of most use in helping understand what is driving an interaction effect. To demonstrate this, let's examine the interaction between **T1 - T2 × FU - Post**, as well as its constituent simple effects contrasts.
+
+This interaction looks at how treatments 1 and 2 differentially impact happiness scores at follow-up versus immediately post treatment. As a first port of call, it is helpful to return to our visualisation of the data, which intuitively shows that patients who received treatment 2 were happier at follow-up than those who received treatment 1. An examination of our interaction contrast shows this was signficiantly significant: patients who recieved treatment 2 were on average between 3.049 and 12.951 points happier at follow-up than those who recieved treatment 1. This interpretation, while correct, can be further clarified. Specifically, it would be useful to quantify whether this effect is potentially differentially driven by the type of treatment or the time of measurement.
+
+To understand what is driving the interaction, we may partition it into its two constituent simple effects contrasts: From these, we learn the following:
+
+- T1 - T2 (Post) & T1 - T2 (FU): There is insufficient evidence of a significant difference between treatments at the post-treatment measure (-2.070, 6.070), and at the follow-up measure (-12.410, 0.410). 
+
+- FU - Post (Tmt1) & FU - Post (Tmt2): Happiness scores in patients who recieved treatment 1 are significantly lower at follow-up as compared to post treatment (-11.501, -4.499). There is insufficient evidence of this effect in treatment 2, such that patients are just as happy at follow-up as at post-treatment (-3.501, 3.501).
+
+### The Benefits of SCIs
+
+In conducting a simple effects analysis with SCIs, we have been able to clarify our understanding of the T1 - T2 × FU - Post interaction effect. Specifically, we have shown that it is driven by the tendency of patients who received treatment 1 to experience significantly reduced happiness at follow-up as compared to immediately post-treatment.
+
+Further, by examining the overlap (or lack thereof) between simple effects confidence intervals, one can infer differences at the population level. For example, the SCIs of the simple effects of Treatments 1 and 2 at follow-up versus immediately post-treatment allows us to infer that the respective population means are different, as the upper bound (-4.499) of FU - Post (Tmt1) does not overlap with the lower bound (-3.501) of FU - Post (Tmt 2).
+
+Finally, SCIs are especially useful if thresholds of importance are introduced. For example, imagine that a difference of **3 dependent units** was deemed the smallest of clinical importance. In this case, the FU - Post (Tmt1) simple effects contrast is both significant and clinically important (as |-4.499| > 3). Likewise, the Ts - Ctrl (Post) simple effects contrast is significant, but may or may not be clinically important (as 2.475 < 3).
+
+### Limitations of a Simple Effects Analysis
+
+Engaging in a simple effects analysis, as compared to an analysis of just main and interaction effects, comes at the cost of reduced power.  This is necessarily the case because we are looking at cell means; in a between x within0subjects analysis, simple effects contrasts will necessarily have a reduced $n$ as compared to a main and interaction effects analysis.
 
 ------------------------------------------------------------------------
 
 ```{r, echo = FALSE, fig.align = 'center', out.width = '50%'}
-knitr::include_graphics("../man/figures/PsyR.png")
+knitr::include_graphics("../man/figures/logo.png")
 ```
 
 ------------------------------------------------------------------------
