@@ -1,11 +1,14 @@
 ---
-title: "manual-calc_crit-values"
+title: "Manually Calculating Critical Constants"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{manual-calc_crit-values}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+bibliography: references.bib
 ---
+
+A vignette to demonstrate how to use PsyR to manually calculate critical constants (CCs) and corresponding confidence intervals (CIs). This follows the methodology detailed in [@bird2002].
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -14,101 +17,107 @@ knitr::opts_chunk$set(
 )
 ```
 
+First, let's load PsyR.
+
 ```{r setup}
 library(PsyR)
 ```
 
-Sometimes you just want to manually calculate a critical value yourself, and the 
-consequent confidence intervals. Here is how you do that:
-
-We are going to assume a contrast SE of 2.5, and an alpha rate of 0.05.
-Let's also assume a 2 (within) x 2 (between) design, with 25 participants in each group.
-Let's also just assume:
-df within of 1,
-a df between of 2, 
-and a df error of 98.
+For the purposes of this vignette, let's assume that we are analysing data from a 2 x (2) between x within design, with *n* = 25 participants per group. Let's also assume a contrast standard error of 2.5, an ⍺ of .05, within degrees of freedom (df) of 1, between df of 2, and a df error of N - J = 98. Each of these will be assigned to a value in the code-block below.
 
 ```{r, setup vars}
-
 v_w <- 1
 v_b <- 2
 v_e <- 98
-SE = 2.5
+SE  <- 2.5
 ```
 
-First lets calculate the critical constant for each method:
+## Calculating Critical Constants
 
-Individual t:
+#### Individual t
+
+The CC for an individual planned contrast can be calculated from the central t distribution using the the nominal ⍺ and degrees of freedom error in the formula $t_{⍺/2;v_E}$. Consequently, the `cc_ind_t()` function takes an argument for each of v_e and alpha (where alpha is by default set at .05)
 
 ```{r ind t}
-
 cc_ind_t(v_e)
-
 ```
 
-Bonferroni corrected t, assuming 2 contrasts in the family of whichever contrasts...
+#### Bonferonni corrected t
+
+The CC for a contrast within a planned analysis may be calculated using the Bonferonni corrected t formula $t_{⍺/2k;v_E}$, where k = the number of planned contrasts and v_e = the degrees of freedom error. In the current example, we will assume there are 2 planned contrasts, and assign *k* as such. Note that if $k > v_B$, this procedure will always produce narrower CCs than a Scheffé approach.
 
 ```{r bonf t}
-
-k = 2
-cc_bonf_t(v_e=v_e, n_k = 2)
-
+n_k <- 2
+cc_bonf_t(v_e = v_e, n_k = n_k)
 ```
 
-Post-hoc Scheffe adjustment for the between family
+#### Post-hoc Scheffé adjustments
+
+**Between Family**
+
+$\sqrt{v_BF_{⍺; v_B, v_E}}$
 
 ```{r, ph_b}
-
-cc_ph_b(v_b=v_b, v_e=v_e)
-
+cc_ph_b(v_b = v_b, v_e = v_e)
 ```
 
+**Within Family**
 
-Or post-hoc Scheffe adjustment for the within family
+$\sqrt{\frac{v_Wv_E}{v_E - v_W + 1}F_{⍺; v_W, v_E - v_W + 1}}$
 
 ```{r, ph_w}
-
-cc_ph_w(v_w=v_w, v_e=v_e)
+cc_ph_w(v_w = v_w, v_e = v_e)
 ```
 
-or Between x within post-hoc using Roy's GCR
+**Between x Within, using Roy's GCR**
+
+$\sqrt{v_Eθ_{⍺; s, m, n}\over1 -θ_{⍺; s, m, n}}$
 
 ```{r, ph_bw}
-
-cc_ph_bw(v_w, v_b, v_e)
+cc_ph_bw(v_w = v_w, v_b = v_b, v_e = v_e)
 ```
 
-Let's assume we'll use this CC to construct our confidence intervals ourselves. We can do that as follows:
+## Calculating Confidence Intervals
+
+Let's assume we'll use this CC to construct our confidence intervals ourselves. We can do that by calculating the value to be added to or subtracted from the estimated effect.
 
 ```{r, cis}
-
 cc <- cc_ph_bw(v_w, v_b, v_e)
 compute_contrast_ci(cc, SE)
 ```
 
+Per Bird 2002
+
+$s =$ min$(v_B, v_W)$
+
+$m = \frac{(|v_B - v_W| - 1)}{2}$
+
+$n = \frac{(|v_E - v_W| - 1)}{2}$
+
 If you have a theta value from a post-hoc between x within design, where theta is a component of your covariance matrix, you can use the following function to get the associated p-value.
 
-```{r, gcr_p}
+[@chiani2016]
 
+```{r, gcr_p}
 s = 2
 m = -0.5
 n = 50
 theta = 0.2
 
 1 - gcr_cdf(s, m, n, theta)
-
 ```
 
 Thus the CIs would be the mean, plus and minus the above number.
 
-For the smr procedure, you would use:
+For the smr procedure [@Bird2005], $CC = \sqrt{SMR_{⍺*;p,qν_{E}}}$, you would use:
+
+where p = number of variables, q = degrees of freedom for wishart distrib, v_e = degrees of freedom error for test statistic.
 
 ```{r, smr}
-
 p = 2
 q = 2
 v_e = 96
-cc <- cc_smr(p, q, v_e, .05)
-print(cc)
-```
 
+cc <- cc_smr(p, q, v_e, .05)
+cc
+```
