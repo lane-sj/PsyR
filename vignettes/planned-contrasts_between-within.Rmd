@@ -72,9 +72,9 @@ depression %>%
 
 ## The Analysis
 
-Let's prepare to run some statistical tests!
+Here we will obtain and store the necessary output from which to use PsyR to generate SCIs.
 
-Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. To do so, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function. `mod` will take in the `Subject` column to identify subjects, the `Happiness` column as the dependent variable, the `depression` dataframe, the `Group` column as the between-subjects IV, and the `Time` column as the within-subjects IV. Note that the generation and storage of this ANOVA model in this specific manner is essential for downstream compatibility with functions in the `emmeans` package, and for eventual generation of SCIs with PsyR.
+To start, we must generate an ANOVA model of our data. To do so, let's specify that we want a multivariate analysis, using `afex::afex_options()`. Next, create a new object `mod` by calling `afex::aov_ez()`. `mod` will take in the `Subject` column to identify subjects, the `Happiness` column as the dependent variable, the `depression` dataframe, the `Group` column as the between-subjects factor, and the `Time` column as the within-subjects factor. Note that the generation and storage of this ANOVA model in this specific manner is essential for downstream compatibility with functions in the `emmeans` package, and for eventual generation of SCIs with PsyR.
 
 ```{r aov, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
@@ -115,7 +115,7 @@ between_contrasts = list(
 )
 ```
 
-Now that we have defined our between-subjects main effects contrasts, let's obtain the row means for the between-subjects Group condition. To do so, create `emms_grp` by calling `emmeans::emmeans()`, placing `mod` in the "object" argument and outputing based upon the between-subjects factor `Group`. 
+Now that we have defined our between-subjects main effects contrasts, let's obtain the row means for the between-subjects Group condition. To do so, create `emms_grp` by calling `emmeans::emmeans()`, placing `mod` in the "object" argument and outputting based upon the between-subjects factor `Group`. 
 
 ``` {r, get_btwn_emms}
 emms_grp <- emmeans(mod, c("Group"))
@@ -152,7 +152,7 @@ within_contrasts = list(
 )
 ```
 
-Following similar steps as with our between-subjects contrasts, let's obtain the column means for the different time points of measurement and store the results statistical output of the main effects contrasts in the `win_fx` object.
+Following similar steps as with our between-subjects contrasts, let's obtain the column means for the different time points of measurement and store the results of statistical output of the main effects contrasts in the `win_fx` object.
 
 ``` {r, emms_win}
 emms_win <- emmeans(mod, "Time")
