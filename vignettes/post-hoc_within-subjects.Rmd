@@ -1,5 +1,5 @@
 ---
-title: "Post-Hoc Within-Subjects ANOVA via CIs"
+title: "Post-Hoc Within-Subjects ANOVA via SCIs"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{post-hoc_within-subjects}
@@ -7,7 +7,10 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 bibliography: references.bib
 ---
-A vignette to help understand how to use PsyR to enact a Post-Hoc Analysis of Variance via Confidence Intervals (CIs) in a single factor within-subjects design [@bird2004]. By using CIs, a researcher can gain greater insight into the magnitude of an effect, lending greater nuance and specificity to analysis. This technique adopts a multivariate approach, recognising that each subject produces multiple scores which may be correlated, and assuming a lack of spherecity in the data (as is necessarily expected in within-subjects designs).
+
+A vignette to help understand how to use PsyR to conduct a Post-Hoc Analysis of Variance via Simultaneous Confidence Intervals (SCIs) in a single factor within-subjects design [@bird2004]. By using SCIs, a researcher can capture the effect size of a given contrast, lending greater nuance and specificity to analysis.
+
+This vignette will adopts a multivariate approach, recognising that each subject produces multiple scores which may be correlated, and assuming a lack of spherecity in the data (as is necessarily expected in within-subjects designs).
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -29,7 +32,7 @@ library(tidyverse)
 
 ## The Data
 
-The `kevin_within` dataframe contains data from a single-factor within-subjects experiment assessing the impact of a new treatment on patient wellbeing. N = 5 participants were recruited, and their wellbeing was measured pre-treatment, post-treatment, and at a 6 month follow-up. Thus, the dependent variable (wellbeing) has p = 3 levels.
+The `kevin_within` dataframe contains data from a single-factor within-subjects experiment which assessed the impact of a new treatment on patient wellbeing. *N* = 5 participants were recruited, and their wellbeing was measured at *p* = 3 levels: pre-treatment, post-treatment, and at a 6 month follow-up.
 
 Let's load the data, then call the `head()` function to print the first 5 rows.
 
@@ -44,7 +47,7 @@ To learn more about the `kevin_within` dataframe, call the help function using `
 ?kevin_within
 ```
 
-Also, let's tidy up the data, labeling the levels of our independent variables for greater clarity.
+Also, let's tidy up the data and label the levels of our within-subjects factor for greater clarity.
 
 ```{r longform}
 kevin_within <- kevin_within %>%
@@ -57,7 +60,9 @@ kevin_within <- kevin_within %>%
   )
 ```
 
-Next, let's visualise our data. Doing so allows us to understand the overall layout of the data, which (in addition to other methods) can be used to inform which contrasts should be analysed.
+Next, let's visualise our data. This is especially useful in a post-hoc analysis, where contrasts of interest may be informed by the pattern of sample means observed after data collection has occurred.
+
+Doing so allows us to understand the overall layout of the data, which (in addition to other methods) can be used to inform which contrasts should be analysed.
 
 ```{r boxplotit, fig.width = 7, fig.height = 4}
 kevin_within %>%
@@ -71,13 +76,9 @@ kevin_within %>%
 
 Let's prepare to run some statistical tests!
 
-Here we will create the building blocks for an ANOVA model in the first instance, and later our SCIs. This workflow can be justified as follows.
+Here we will generate and store an overall ANOVA model. If the maximal contrast yields a Hotelling's T^2^ statistic that is larger than or equal to the ANOVA F~c~ [@hotelling1931], contrasts of interests may be defined and tested. As part of this testing, we will use PsyR to generate SCIs from which to gain insight into the directionality and magnitude of the effects at test (while maintaining a FWER \< ⍺).
 
-- An overall multivariate-model homogeneity test allows an ⍺-level test of the null (homogeneity) hypothesis: that, at the population level, no difference exists between conditions. For the maximal contrast, a Hotelling's T^2^ statistic [@hotelling1931] is generated and compared to an F~c~, where if T^2^ ≥ F~c~ a heterogeneity inference may be made.
-
-- The creation of SCIs goes beyond a traditional hypothesis testing approach of determining the significance of a set of contrasts. Where hypothesis testing allows one to determine whether to reject the null hypothesis, SCIs provide additional information regarding the directionality and magnitude of the effects at test (while maintaining a FWER \< ⍺).
-
-The following code builds towards this approach. First, let's specify that we want a multivariate analysis, using the `afex::afex_options()` function. Next, create a new object `mod` by calling the `afex::aov_ez()` function which takes in the `Subject` column to identify subjects, the `Score` column as the dependent variable, the `kevin_within` dataframe, and the `Group` column set as between-subjects. Of note, defining `mod` in this way is important for our eventual SCI output, as it allows emmeans to compute estimated marginal means. Finally, create a new object `emms`, calling the `emmeans::emmeans()` function and specifying that we want to take in `mod` (the object we just made) and output based upon `Session`. Running this code will give us the cell means for the dependent variable (wellbeing) at each level of the independent variable (time of measurement).
+The following code builds towards this approach. To start, let's use `afex::afex_options()` to specify that our analysis will be multivariate. Next. we will generate our ANOVA model using `afex::aov_ez()` and store it in the `mod` object. `afex::aov_ez()` will take in the `Subject` column to identify subjects, the `Score` column as the dependent variable, `kevin_within` as the dataframe, and set the `Session` column as the within-subjects factor. Note that the generation and storage of this ANOVA model in this specific manner is essential for downstream compatibility with functions in the `emmeans` package, and for eventual generation of SCIs with PsyR.
 
 ```{r model, message = FALSE, warning = FALSE}
 afex_options(emmeans_model = "multivariate")
@@ -88,23 +89,32 @@ mod <- aov_ez(
   kevin_within,
   within = "Session"
 )
+```
 
+Given the maximal contrast was significant (*p* \< .05), it is sensible to continue with our analysis. Specifically, let's use `emmeans::emmeans()` to obtain mean wellbeing scores at each level of the within-subjects factor. Create the `emms` object, and store within it the output from `emmeans::emmeans()`, placing `mod` in the "Model" argument and the `Session` column in the "Specs" argument.
+
+```{r, emms}
 emms <- emmeans(mod, "Session")
+```
+
+```{r, emms_hidden, echo = FALSE}
+emms |> 
+  as.data.frame() |> 
+  select(Session:df) |> 
+  knitr::kable(digts = 3)
 ```
 
 Time to define our contrasts!
 
-To do so, it is important to look at the stated aims of the research, the maximal contrast, and the pattern of sample means in our data.
+Given this is a post-hoc analysis, contrasts should be defined with reference to the stated aims of the research, the maximal contrast, and the pattern of sample means in our data. The following contrasts of interest where chosen:
 
-In this case, contrasts examining the difference in wellbeing at each measurement point seem like appropriate questions to ask of the data. However, it should be noted that if a researcher wanted to define more contrasts, our methodology prevents prevents inflation of the Type I error rate, meaning that it is valid to define as many contrasts as are deemed of interest. With that being said, the following three contrasts are chosen for analysis
+- "Post - Pre" ➞ The difference between wellbeing scores obtained at post-intervention as compared to at pre-intervention.
 
-- "Post - Pre" ➞ The difference between post and pre-intervention scores.
+- "FU - Post" ➞ The difference between wellbeing scores obtained at the 6-month follow-up as compared to at post-intervention.
 
-- "FU - Post" ➞ The difference between 6 month follow-up and post-intervention scores.
+- "FU - Pre" ➞ The difference between wellbeing scores obtained at the 6-month follow-up as compared to at pre-intervention.
 
-- "FU - Pre" ➞ The difference between 6 month follow-up and pre-intervention scores.
-
-Having defined our contrasts, let's store them within a contrasts table. Create the `cnt_res` object, then call the `emmeans::contrast()` function from the emmeans package, setting `emms` in the "Object" argument and `contrasts` in the "Method" argument (which will take in our newly defined contrasts). The output of this code, as shown below, contains the results of hypothesis tests of each contrast.
+Let's now generate and store statistical output pertaining to each of these contrasts. To do so, create the `cnt_res` object, then call `emmeans::contrast()`, setting `emms` in the "Object" argument and `contrasts` in the "Method" argument.
 
 ```{r phoc}
 contrasts <- list(
@@ -115,17 +125,15 @@ contrasts <- list(
 
 cnt_res <- contrast(emms, contrasts)
 ```
-```{r, kable_cntres, echo = FALSE}
-cnt_res_display <- as.data.frame(cnt_res)
 
-cnt_res_display |> 
+```{r, kable_cntres, echo = FALSE}
+cnt_res |> 
+  as.data.frame() |> 
   select(contrast:df) |> 
   knitr::kable(digits = 3)
 ```
 
-### The (Initial) Interpretation
-
-The above analysis outputs two p-values, with most of them indicating a failure to reject the null hypothesis. Of note, the "Post - Pre" contrast seems significant according to the p-value from emmeans but does not meet the criteria for significance according to the p-value from PsyR. Here, clarity may be achieved by examining our CIs, where lower and upper bounds which are either both positive or both negative are indicative of a significant result. Further, CIs let us understand the magnitude of the effects represented by our contrasts. To generate our CIs with PsyR, let's create an object `contrasts_w_cis` using the `psyci()` function, specifying the following:
+With this output stored, we may now use PsyR to generate SCIs and commensurate *p*-values. To do so create the `output` object, and store within it the results of a `psyci()` call. Within the function, we will specify the following:
 
 - The model is the previously made `mod` object, where the model must be made using the afex package (and of class afex_aov).
 
@@ -133,23 +141,23 @@ The above analysis outputs two p-values, with most of them indicating a failure 
 
 - The method is set as "ph", creating confidence intervals (estimate ± SE · cc) using a post-hoc method [@bird2004].
 
-- Alpha is set at .05 (both here and by default), indicating the desired type I error rate.
-
 Note that PsyR infers the family and participating factors for every original `emmGrid`, and as such there is no need to specify these features in the `psyci()` function call.
 
 ```{r, scis}
-psyci(
+output <- psyci(
   model = mod, 
   contrast_tables = cnt_res, 
-  method = "ph", 
-  alpha = .05
-) %>%
+  method = "ph"
+)
+```
+```{r, scis_hidden, echo = FALSE}
+output |> 
 knitr::kable(digits = 3)
 ```
 
-## PsyR's Contribution
+## The Interpretation
 
-By examining our CIs, we can confirm that there is insufficient evidence to suggest a significant effect in any of our contrasts.
+By examining the generated SCIs, we can confirm that there is insufficient evidence to suggest a significant effect in any of our contrasts.
 
 - Compared to pre-intervention, scores at post-intervention may have improved by up to 6.192 units, or may have regressed by 0.192 units.
 
@@ -157,9 +165,9 @@ By examining our CIs, we can confirm that there is insufficient evidence to sugg
 
 - Compared to pre-intervention, participants at follow up may have improved by up to 17.836 units, or may have regressed by 5.836 units.
 
-Despite not seeing any significant results, the extra information obtained through a CI approach can still be useful, such as in a scenario where thresholds of importance are introduced. For example, imagine that following new government guidelines, the researcher was only interested in interventions that resulted in a difference of **2 on the wellbeing score**. The addition of this stipulation alters our analysis. For example:
+By adopting an SCI approach from which one can understand the magnitude and directionality of the effect captured by a contrast, these non-significant results are rendered more informative. For example, imagine that following new government guidelines, the researcher was only interested in interventions that resulted in a difference of **2 on the wellbeing score**. The addition of this stipulation alters our analysis:
 
-- Compared to pre-intervention, scores at post-intervention may have improved by up to 6.192 units, or may have regressed by 0.192 units. While there is insufficient evidence to make a conclusion regarding significance, examination of CIs allows for a conclusion regarding clinical relevance. Specifically, the treatment may result in a clinically relevant increase in wellbeing (6.192 \> 3), but will never result in a clinically relevant decrease in wellbeing (-0.192 \< 3).
+- Compared to pre-intervention, scores at post-intervention may have improved by up to 6.192 units, or may have regressed by 0.192 units. While there is insufficient evidence to make a conclusion regarding significance, the treatment may result in a clinically relevant increase in wellbeing (6.192 \> 2), but did not result in a clinically relevant decrease in wellbeing (-0.192 \< 2).
 
 ------------------------------------------------------------------------
 
