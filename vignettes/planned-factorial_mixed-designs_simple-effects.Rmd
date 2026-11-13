@@ -168,7 +168,7 @@ emms_win |>
 win_fx <- contrast(emms_win, within_contrasts)
 ```
 ```{r, kable_winfx, echo = FALSE}
-win_display |> 
+win_fx |> 
   as.data.frame() |> 
   select(contrast:df) |> 
   knitr::kable(digits = 3)
@@ -198,7 +198,7 @@ In this analysis, we will define a single all factorial family consisting of the
 To obtain output pertaining to simple effects contrasts, we require the cell means from our data. While we had previously stored these within `emms`, the way in which they are stored in `emms` is incompatible with our later code. Instead, we must generate and store cell means as split by the `Group` column of our dataframe. To do so, create `win_by_grp` and call `emmeans::emmeans()`. Place `mod` in the "Object" argument, and `Time` by `Group` in the "Specs" argument. 
 
 ``` {r win_by_grp_emms}
-win_by_grp <- emmeans(mod, ~ Time|Group)
+win_by_grp <- emmeans(mod, ~ Time | Group)
 ```
 ``` {r win_by_grp_emms_hidden, echo = FALSE}
 win_by_grp |> 
@@ -221,17 +221,54 @@ win_by_grp_fx |>
 
 Let's now store output from which emmeans can compute simple effects contrasts related to our between-subjects main effects contrasts. To do so, call `base::list()` and define coefficient vectors which point to the "Post" and "FU" levels of our within-subjects factor.
 
-Next, create the `btwn_by_treat_fx` object. Call `emmeans::contrast()`, placing `emms` in the "Object" argument and a list of our between-subjects and within-simple contrasts in the "Interaction" argument. This will allow emmeans to compute four simple effects contrasts pertaining to our between-subjects main effects contrasts at the cell levels of "post" and "FU".
+Next, create the `win_sfx` object. Call `emmeans::contrast()`, placing `emms` in the "Object" argument and a list of our between-subjects and within-simple contrasts in the "Interaction" argument. This will allow emmeans to compute four simple effects contrasts pertaining to our between-subjects main effects contrasts at the cell levels of "post" and "FU".
 
 ```{r, btwn_at_within}
 within_simple <-  list(
   "Post*" = c(0, 1, 0),
   "FU*" = c(0, 0, 1)
 )
-btwn_by_treat_fx <- contrast(emms, interaction = list(between_contrasts, within_simple))
+win_sfx <- contrast(emms, interaction = list(between_contrasts, within_simple))
+```
+```{r, kable_win, echo = FALSE}
+win_sfx |> 
+  as.data.frame() |> 
+  select(Group_custom:df) |> 
+  knitr::kable(digits = 3)
+```
+
+Following similar steps, let's generate and store statistical output of simple effects contrasts capturing differences between levels of the between-subjects factor for each within-subjects main effects contrast.
+
+``` {r btwn_by_grp_emms}
+btwn_by_grp <- emmeans(mod, ~ Group | Time)
+```
+``` {r btwn_by_grp_emms_hidden, echo = FALSE}
+btwn_by_grp |> 
+  as.data.frame() |>
+  select(Group:df) |> 
+  knitr::kable(digits = 3) 
+```
+
+```{r, btwn_by_grp_fx}
+btwn_by_grp_fx <- contrast(btwn_by_grp, method = between_contrasts)
+```
+```{r, kable_btwngrp_fx, echo = FALSE}
+btwn_by_grp_fx |> 
+  as.data.frame() |> 
+  select(contrast:df) |> 
+  knitr::kable(digits = 3)
+```
+
+```{r, btwn_simp_conts}
+between_simple <-  list(
+  "Ctrl*" = c(1, 0, 0),
+  "T1*" = c(0, 1, 0),
+  "T2*" = c(0, 0, 1)
+)
+btwn_sfx <- contrast(emms, interaction = list(within_contrasts, between_simple))
 ```
 ```{r, kable_btwntreat, echo = FALSE}
-btwn_by_treat_fx |> 
+btwn_sfx |> 
   as.data.frame() |> 
   select(Group_custom:df) |> 
   knitr::kable(digits = 3)
@@ -254,7 +291,7 @@ Next, we will call psyci() and input the following.
 - Note that while PsyR generally infers the family and participating factors for every original emmgrid, the family_group must be manually defined when conducting an all-factorial simple effects analysis. To do so, call `base::rep()` to generate the string "all_factorial" a number of times equal to the length of `all_fx` (3).
 
 ```{r, psyci}
-all_fx <- c(win_fx, btwn_fx, int_fx, win_by_grp_fx, btwn_by_treat_fx)
+all_fx <- c(win_fx, btwn_fx, int_fx, win_sfx, btwn_sfx)
 alphas = 3*.05 # 3 * alpha / nk
 
 output <- psyci(
@@ -270,11 +307,10 @@ display <- output %>%
   unclass() %>%
   bind_rows() %>%
   mutate(
-   col = coalesce(contrast, Group, Group_custom),
-   Time = coalesce(Group, contrast, Time_custom),
+   Group = coalesce(contrast, Group_custom),
+   Time = coalesce(contrast, Time_custom),
   ) %>%
-  rename(ignore = Group, Group = col) %>%
-  select(estimate:psyr_p_value, Group, Time) %>%
+  select(estimate:F_value, p_value_adjusted, cc:upper, Group, Time) %>%
   relocate(Group, Time)
 
 display[1, 1] <- NA
