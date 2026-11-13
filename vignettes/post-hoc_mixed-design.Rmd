@@ -14,7 +14,7 @@ A vignette to demonstrate how to use PsyR to enact a Post-Hoc Analysis of Varian
 
 - **Within** - The within-subjects main effect contrasts. These are tested using a Hotelling's T^2^ test [@hotelling1931]. This is a multivariate approach, assuming a lack of sphericity.
 
-- **Between x Within** - The between x within interaction contrasts. These are tested using a Roy's Greatest Characteristic Root (GCR) procedure [@roy1953]. This is a multivariate approach, assuming a lack of sphericity. In using a GCR method, PsyR adequately controls the type I error rate when creating post-hoc SCIs.
+- **Between x Within** - The between x within interaction contrasts. These are tested using a Roy's Greatest Characteristic Root (GCR) procedure [@roy1957some]. This is a multivariate approach, assuming a lack of sphericity. In using a GCR method, PsyR adequately controls the type I error rate when creating post-hoc SCIs.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -122,6 +122,7 @@ Let's now build toward STP output for each of these chosen main effects contrast
 ```{r, btwn_emms}
 emms_btwn <- emmeans(mod, "Group")
 ```
+
 ```{r, btwn_emms_hidden, echo = FALSE}
 emms_btwn |> 
   as.data.frame() |> 
@@ -163,7 +164,8 @@ Next, let's generate and store the estimated marginal means for our within-subje
 ```{r, emms_win}
 emms_win <- emmeans(mod, "Session")
 ```
-``` {r, emms_win_hidden, echo = FALSE}
+
+```{r, emms_win_hidden, echo = FALSE}
 emms_win |> 
   as.data.frame() |> 
   select(Session:df) |> 
@@ -183,15 +185,16 @@ win_fx |>
   knitr::kable(digits = 3)
 ```
 
-Finally, let's generate and store statistical output using an overall test of Roy's GCR for each of our interaction effect contrasts. Note that our interaction contrasts will be defined within the `emmeans::contrast()` call as the products of our between- and within-subjects main effects contrasts. 
+Finally, let's generate and store statistical output using an overall test of Roy's GCR for each of our interaction effect contrasts. Note that our interaction contrasts will be defined within the `emmeans::contrast()` call as the products of our between- and within-subjects main effects contrasts.
 
-In service of this eventual output, we must first generate cell means for each of the 12 possible cells within our design. Create `emms_int`, and then call `emmeans::emmeans()`. Place `mod` in the "Object" argument, and tell the function to output according to both `Group` and `Session`. 
+In service of this eventual output, we must first generate cell means for each of the 12 possible cells within our design. Create `emms_int`, and then call `emmeans::emmeans()`. Place `mod` in the "Object" argument, and tell the function to output according to both `Group` and `Session`.
 
 ```{r, emms_int}
 emms_int <- emmeans(
   mod, c("Group", "Session")
 )
 ```
+
 ```{r, emms_int_hidden, echo = FALSE}
 emms_int |> 
   as.data.frame() |> 
