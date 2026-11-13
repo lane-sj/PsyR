@@ -1,11 +1,14 @@
 ---
-title: "GCR-probability-calculator"
+title: "GCR Probability Calculator"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{GCR-probability-calculator}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+bibliography: references.bib
 ---
+
+A vignette to demonstrate how to use PsyR to manually calculate Roy's Greatest Characteristic Root (GCR), as described in @roy1957some. This is useful for...
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -14,34 +17,35 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+```{r setup, message = FALSE, warning = FALSE}
 library(PsyR)
 library(tidyverse)
 ```
 
-## Roy's Largest Root
+## Roy's GCR
 
-The first step is to get Roy's Largest Root. To do this we need to fit our model as a MANOVA
+To generate Roy's GCR, we first need to fit some data to a MANOVA model. We will demonstrate this using the `social_anxiety` dataframe, which contains the results of a 3 x (4) between x within experiment that assessed a new treatment for social anxiety. Here, *N* = 90 participants were randomly allocated to one of three levels of the between-subjects independent variable: a minimum contact control condition, a standard treatment, or a new treatment. All participants were then measured on four occasions: immediately before treatment, immediately after treatment, at a 3 month follow-up, and at a 6 month follow-up. The dependent variable is social anxiety rating, where a lower score is indicative of lower social anxiety.
 
-Let's use the built in `social_anxiety` dataset to run our analysis
-
+Let's load the data, then call the `head()` function to print the first 5 rows.
 
 ```{r load}
-
 data(social_anxiety)
 head(social_anxiety, 5)
 ```
 
-Pivot the data to wideform
+Let's also tidy the data, pivoting it to wide-form.
 
 ```{r, wideform}
 
 social_anxiety  <- social_anxiety %>% 
-  pivot_wider(names_from = Session, values_from = Score)
+  pivot_wider(
+    names_from = Session, 
+    values_from = Score
+  )
 
 ```
 
-Now we run a MANOVA analysis to get Roy's GCR of the co-variance matrix
+Now we run a MANOVA analysis to get Roy's GCR of the co-variance matrix.
 
 ```{r, multimod}
 
@@ -54,7 +58,7 @@ So we are working with a value of 0.3903
 
 ## compute probability
 
-Now we compute the probability of observing a GCR of 0.39 of our analysis. 
+Now we compute the probability of observing a GCR of 0.39 of our analysis.
 
 ```{r, set params}
 
@@ -73,4 +77,3 @@ Now the parameters are set, we can observe the probability of theta given v_w, v
 p = pgcr(theta, v_w, v_b, v_e)
 p
 ```
-
