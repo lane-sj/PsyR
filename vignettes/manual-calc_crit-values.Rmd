@@ -71,7 +71,7 @@ cc_ph_w(v_w = v_w, v_e = v_e)
 
 The `cc_ph_bw()` function calculates the critical constant for a between x within-subjects family using $\sqrt{v_Eθ_{⍺; s, m, n}\over1 -θ_{⍺; s, m, n}}$.
 
-Here, $θ_{s, m, n}$ uses Roy's Greatest Characteristic Root (GCR) distribution [@roy1953]. Specifically:
+Here, $θ_{s, m, n}$ uses Roy's Greatest Characteristic Root (GCR) distribution [@roy1957some]. Specifically:
 
 - $s =$ min$(v_B, v_W)$
 
