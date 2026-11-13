@@ -168,7 +168,7 @@ emms_win |>
 win_fx <- contrast(emms_win, within_contrasts)
 ```
 ```{r, kable_winfx, echo = FALSE}
-win_display |> 
+win_fx |> 
   as.data.frame() |> 
   select(contrast:df) |> 
   knitr::kable(digits = 3)
@@ -216,7 +216,7 @@ display <- output %>%
     Group = coalesce(contrast, Group_custom),
     Time = coalesce(contrast, Time_custom)
   ) %>%
-  select(estimate:psyr_p_value, Group, Time) %>%
+  select(estimate:F_value, p_value_adjusted, cc:upper, Group, Time) %>%
   relocate(Group, Time)
 
 display[3, 1] <- NA

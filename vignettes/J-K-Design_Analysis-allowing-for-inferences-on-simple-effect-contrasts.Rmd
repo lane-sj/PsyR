@@ -193,7 +193,6 @@ interaction_fx <- contrast(
   interaction = list(experience_contrasts, therapy_contrasts),
   adjust = "bonferroni"
 )
-knitr::kable(interaction_fx, digits = 3)
 ```
 
 ```{r, AB_hidden, echo = FALSE}
@@ -249,7 +248,7 @@ display_bf <- output_bf %>%
     Experience = coalesce(contrast, Experience_custom),
     Therapy = coalesce(Therapy, Therapy_custom),
   ) %>%
-  select(estimate:psyr_p_value, Experience, Therapy) %>%
+  select(estimate:F_value, p_value_adjusted, cc:upper, Experience, Therapy) %>%
   relocate(Experience, Therapy)
 
 knitr::kable(display_bf, digits = 3)
@@ -283,7 +282,7 @@ display_ph <- output_ph %>%
     Experience = coalesce(contrast, Experience_custom),
     Therapy = coalesce(Therapy, Therapy_custom),
   ) %>%
-  select(estimate:psyr_p_value, Experience, Therapy) %>%
+  select(estimate:F_value, p_value_adjusted, cc:upper, Experience, Therapy) %>%
   relocate(Experience, Therapy)
 
 knitr::kable(display_ph, digits = 3)
@@ -310,7 +309,7 @@ Next, create `therapy_fx` by calling `emmeans::contrast()`. Place our newly made
 ```{r, therapy_fx}
 therapy_fx <- contrast(emms_therapy, therapy_contrasts)
 ```
-```{r, therapy_fx, echo = FALSE}
+```{r, therapy_fx_hidden, echo = FALSE}
 therapy_fx  |> 
   as.data.frame() |> 
   select(contrast:df) |> 
@@ -342,7 +341,7 @@ display_ind <- output_ind %>%
     Experience = coalesce(contrast, Experience_custom),
     Therapy = coalesce(contrast, Therapy_custom),
   ) %>%
-  select(estimate:psyr_p_value, Experience, Therapy) %>%
+  select(estimate:F_value, p_value_adjusted, cc:upper, Experience, Therapy) %>%
   relocate(Experience, Therapy)
 
 display_ind[3, 1] <- NA

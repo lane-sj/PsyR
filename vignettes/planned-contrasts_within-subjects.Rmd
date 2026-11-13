@@ -135,8 +135,12 @@ output <- psyci(
   method = "bf"
 )
 ```
-``` {r, get_cis_hidden}
-  knitr::kable(output, digits = 3)
+``` {r, get_cis_hidden, echo = FALSE}
+output |> 
+  unclass() |> 
+  bind_rows() |> 
+  select(contrast:F_value, p_value_adjusted, cc:upper) |> 
+  knitr::kable(digits = 3)
 ```
 
 ## The Interpretation

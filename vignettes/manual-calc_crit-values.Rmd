@@ -107,7 +107,7 @@ theta = 0.2
 1 - gcr_cdf(s, m, n, theta)
 ```
 
-PsyR also has functionality for converting the CC obtained via the Studentized Maximum Root (SMR) procedure into a CC from which to compute CIs [@Bird2005]. Here, the CC is equal to the square root of the SMR paramater: $CC = \sqrt{SMR_{⍺*;p,qν_{E}}}$.
+PsyR also has functionality for converting the CC obtained via the Studentized Maximum Root (SMR) procedure into a CC from which to compute CIs [@bird2005]. Here, the CC is equal to the square root of the SMR parameter: $CC = \sqrt{SMR_{⍺*;p,qν_{E}}}$.
 
 To do so, call `cc_smr()`, where:
 

@@ -196,14 +196,14 @@ output <- psyci(
   method = "smr",
   smr_params = smr_params,
   alpha = alphas
-)
+) 
 ```
 ``` {r, kable_output, echo = FALSE}
 output %>%
   unclass() %>%
   bind_rows() %>%
   mutate(sfx = coalesce(sleep_deprivation, nvh)) %>%
-  select(contrast:psyr_p_value, sfx) %>% 
+  select(contrast:F_value, p_value_adjusted, cc:upper, sfx) %>% 
   relocate(contrast, sfx) %>%
   knitr::kable(digits = 3)
 ```
